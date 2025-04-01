@@ -8,6 +8,7 @@ const { OAuth2Client } = require('google-auth-library'); // Adaugă clientul Goo
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
+const path = require('path');
 
 // Încarcă variabilele din fișierul .env
 dotenv.config({ path: './.env' });
@@ -421,5 +422,12 @@ app.get('/get-financials', verifyToken, async (req, res) => {
     console.error('Eroare la recuperarea datelor financiare:', err);
     res.status(500).json({ message: 'Eroare la server' });
   }
+});
+// Servește fișierele statice construite de React
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+// Rutele pentru frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 
