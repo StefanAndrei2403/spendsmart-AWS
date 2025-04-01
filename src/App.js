@@ -22,7 +22,7 @@ function App() {
 }
 
 const AppRoutes = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); 
   const location = useLocation(); 
   const [isAuthenticated, setIsAuthenticated] = useState(null); // Initial state null for better control
 
