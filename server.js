@@ -15,7 +15,7 @@ dotenv.config({ path: './.env' });
 const app = express();
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3000','http://localhost:5000','https://white-hill-07c276010.6.azurestaticapps.net','https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net','http://localhost:8080','http://localhost:8081'], // Asigură-te că origin-ul este corect
+  origin: ['http://localhost:3000','http://localhost:5000','https://white-hill-07c276010.6.azurestaticapps.net','https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net','http://localhost:8080'],
   methods: 'GET,POST',
   allowedHeaders: 'Content-Type,Authorization'
 }));
