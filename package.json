@@ -12,7 +12,6 @@
     "body-parser": "^2.2.0",
     "chart": "^0.1.2",
     "chart.js": "^4.4.8",
-    "concurrently": "^9.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
@@ -36,7 +35,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "npm install && react-scripts start",
+    "start": "concurrently \"npm install && npm run server\" \"npm install && npm run client\"",
+    "client": "react-scripts start",
+    "server": "node server.js",
     "build": "react-scripts build",
     "eject": "react-scripts eject"
   },
@@ -62,5 +63,8 @@
     "moduleNameMapper": {
       "\\.(css|less|scss|sass)$": "identity-obj-proxy"
     }
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
