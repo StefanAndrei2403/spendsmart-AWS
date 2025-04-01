@@ -59,6 +59,8 @@ jobs:
 
       - name: Set file permissions
         run: |
+          ls -R
+          ls /home/site/
           sudo chown -R $USER:$USER /home/site/wwwroot
           sudo chmod -R 755 /home/site/wwwroot
       
