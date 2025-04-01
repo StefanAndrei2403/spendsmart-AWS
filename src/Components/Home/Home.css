@@ -1,0 +1,44 @@
+.home-container {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+  }
+  
+  .left-container {
+    width: 45%;
+    padding: 20px;
+    border-right: 2px solid #ccc;
+  }
+  
+  .right-container {
+    width: 45%;
+    padding: 20px;
+  }
+  
+  .financial-summary {
+    margin-bottom: 20px;
+  }
+  
+  .financial-summary div {
+    margin-bottom: 10px;
+  }
+  
+  .expense-list ul {
+    list-style-type: none;
+    padding-left: 0;
+  }
+  
+  .expense-list li {
+    margin-bottom: 5px;
+  }
+  
+  .chart {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+  
