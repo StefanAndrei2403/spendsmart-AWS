@@ -36,7 +36,7 @@
   },
   "scripts": {
     "build": "react-scripts build",
-    "start": "npm install -g npm --unsafe-perm && npm install -g express && && npm install -g pg && npm install -g nodemailer npm run server",
+    "start": "npm install -g npm --unsafe-perm && npm install -g express && && npm install -g pg && npm install -g nodemailer && npm run server",
     "client": "react-scripts start",
     "server": "node server.js",
     "eject": "react-scripts eject"
