@@ -36,7 +36,7 @@
   },
   "scripts": {
     "build": "react-scripts build",
-    "start": "npm install && npm run server",
+    "start": "rm -rf node_modules && npm install && npm run server",
     "client": "react-scripts start",
     "server": "node server.js",
     "eject": "react-scripts eject"
