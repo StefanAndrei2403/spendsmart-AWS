@@ -23,9 +23,12 @@ jobs:
         with:
           node-version: '22.x'
 
+      - name: Clear npm cache
+        run: npm cache clean --force
+
       - name: npm install, build
         run: |
-          npm ci --prefer-offline --no-audit
+          npm install --prefer-offline --no-audit --legacy-peer-deps
           npm run build --if-present
 
       - name: Zip artifact for deployment
