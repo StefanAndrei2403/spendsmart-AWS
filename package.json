@@ -36,7 +36,7 @@
   },
   "scripts": {
     "build": "react-scripts build",
-    "start": "npm install -g npm --unsafe-perm && npm install -g express && npm install -g pg && npm install -g nodemailer && npm install -g cors && npm install -g dotenv && npm install -g bcrypt && npm install -g bcryptjs && npm install -g jsonwebtoken && npm install -g googleapis && npm install -g google-auth-library && npm install -g @react-oauth/google && npm install -g react-chartjs-2 && npm install -g react-icons && npm install -g react-router-dom && npm install -g react-router && npm install -g express-session && npm run server",
+    "start": "npm install -g npm --unsafe-perm && ls -l /home/site/wwwroot/node_modules/ && && npm install -g react-scripts && npm install -g express && npm install -g pg && npm install -g nodemailer && npm install -g cors && npm install -g dotenv && npm install -g bcrypt && npm install -g bcryptjs && npm install -g jsonwebtoken && npm install -g googleapis && npm install -g google-auth-library && npm install -g @react-oauth/google && npm install -g react-chartjs-2 && npm install -g react-icons && npm install -g react-router-dom && npm install -g react-router && npm install -g express-session && npm run server",
     "client": "react-scripts start",
     "server": "node server.js",
     "eject": "react-scripts eject"
