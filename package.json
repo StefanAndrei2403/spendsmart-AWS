@@ -36,7 +36,7 @@
   },
   "scripts": {
     "build": "react-scripts build",
-    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "npm install && concurrently \"npm run server\" \"npm run client\"",
     "client": "react-scripts start",
     "server": "node server.js",
     "eject": "react-scripts eject"
