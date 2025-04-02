@@ -31,11 +31,6 @@ jobs:
           npm install
           npm run build --if-present
 
-      - name: Move necessary files to deployment folder
-        run: |
-          mkdir -p deploy_dir
-          mv build middleware models public routes src views package.json package-lock.json README.md server.js deploy_dir/
-
       - name: Zip artifact for deployment
         run: zip -r release.zip deploy_dir
 
@@ -77,4 +72,4 @@ jobs:
         with:
           app-name: 'spendSmart'
           slot-name: 'Production'
-          package: deploy_dir
+          package: .
