@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'; // Adăugat useLocation
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import LoginForm from './Components/LoginForm/LoginForm.jsx';
-import Home from './Components/Home/Home.jsx';
-import ResetPassword from './Components/ResetPassword/ResetPassword.js';
-import Register from './Components/Register/Register.js';
-import AddIncome from './Components/AddIncome/AddIncome.jsx';
-import AddExpense from './Components/AddExpense/AddExpense.jsx';
-import Statistics from './Components/Statistics/Statistics.jsx';
-import Navbar from './Components/Navbar/Navbar.jsx';
+import LoginForm from './Components/LoginForm/LoginForm';
+import Home from './Components/Home/Home';
+import ResetPassword from './Components/ResetPassword/ResetPassword';
+import Register from './Components/Register/Register';
+import AddIncome from './Components/AddIncome/AddIncome';
+import AddExpense from './Components/AddExpense/AddExpense';
+import Statistics from './Components/Statistics/Statistics';
+import Navbar from './Components/Navbar/Navbar';
 
 
 function App() {
