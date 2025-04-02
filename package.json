@@ -36,7 +36,6 @@
   },
   "scripts": {
     "build": "react-scripts build",
-    "postinstall": "npm install && npm run build",
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "client": "react-scripts start",
     "server": "node server.js",

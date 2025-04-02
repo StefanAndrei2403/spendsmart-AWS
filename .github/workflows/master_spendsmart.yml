@@ -28,7 +28,7 @@ jobs:
 
       - name: npm install, build
         run: |
-          npm install --prefer-offline --no-audit --legacy-peer-deps
+          npm install
           npm run build --if-present
 
       - name: Zip artifact for deployment
