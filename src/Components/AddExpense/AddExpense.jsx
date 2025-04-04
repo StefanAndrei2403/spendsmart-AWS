@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext'; // importă AuthContext
+import { useAuth } from '../../context/AuthContext';
 
 const AddExpense = () => {
-  const { user } = useAuth(); // Obține utilizatorul din context
+  const { user } = useAuth();
   const [expenseName, setExpenseName] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState('');
@@ -17,12 +17,7 @@ const AddExpense = () => {
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
 
-  useEffect(() => {
-    fetchCategories();
-    fetchExpenses();
-  }, [user]); // Refetch cheltuieli dacă utilizatorul se schimbă
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await axios.get('/api/categories', {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
@@ -35,9 +30,9 @@ const AddExpense = () => {
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
-  };
+  }, []); // `fetchCategories` nu depinde de alte variabile
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = useCallback(async () => {
     if (!user) {
       console.error("User is not authenticated");
       return;
@@ -52,7 +47,12 @@ const AddExpense = () => {
     } catch (err) {
       console.error('Error fetching expenses:', err);
     }
-  };
+  }, [user]); // `fetchExpenses` depinde de `user`
+
+  useEffect(() => {
+    fetchCategories();
+    fetchExpenses();
+  }, [user, fetchCategories, fetchExpenses]); // Asigură-te că folosești dependențele corect
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +66,7 @@ const AddExpense = () => {
       amount: expenseAmount,
       date: expenseDate,
       category_id: categoryId,
-      user_id: user.id, // Folosește user.id din context
+      user_id: user.id,
     };
 
     try {
