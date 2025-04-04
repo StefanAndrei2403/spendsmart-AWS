@@ -1,161 +1,173 @@
-.wrapper{
-    width: 420px;
-    background: transparent;
-    border: 2px solid rgba(5, 5, 5, 0.2);
-    backdrop-filter: blur(30px);
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    color: #fff;
-    border-radius: 10px;
-    padding: 30px 40px;
+html, body {
+  height: 100%; /* Asigură că avem o înălțime completă */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;  /* Centrează pe orizontală */
+  align-items: center;  /* Centrează pe verticală */
 }
 
-.wrapper h1{
-    font-size: 36px;
-    text-align: center;
+.wrapper {
+  width: 420px;
+  background: transparent;
+  border: 2px solid rgba(5, 5, 5, 0.2);
+  backdrop-filter: blur(30px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  border-radius: 10px;
+  padding: 30px 40px;
+  position: relative;
+  text-align: center;
+  margin: 0 auto; /* Asigură că wrapper-ul este centrat pe orizontală */
 }
 
-.wrapper .input-box{
-    position: relative;
-    width: 100%;
-    height: 50px;
-    background: transparent;
-    margin:30px 0;
 
+.wrapper h1 {
+  font-size: 36px;
+  text-align: center;
 }
 
-.input-box input{
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    outline: none;
-    border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 40px;
-    font-size: 16px;
-    color: #fff;
-    padding: 20px 45px 20px 20px;
+.wrapper .input-box {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  background: transparent;
+  margin: 30px 0;
 }
 
-.input-box input::placeholder{
-    color: #fff;
+.input-box input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  outline: none;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 40px;
+  font-size: 16px;
+  color: #fff;
+  padding: 20px 45px 20px 20px;
 }
 
-.input-box .icon{
-    position:absolute;
-    right:20px;
-    top: 50%;
-    transform:translateY(-50%);
-    font-size:16px;
+.input-box input::placeholder {
+  color: #fff;
 }
 
-.wrapper .remember-forgot{
-    display:flex;
-    justify-content: space-between;
-    font-size:14.5px;
-    margin: -15px 0 15px;
+.input-box .icon {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
 }
 
-.remember-forgot label input{
-    accent-color: #fff;
-    margin-right: 4px;
+.wrapper .remember-forgot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14.5px;
+  margin: -15px 0 15px;
 }
 
-.remember-forgot a{
-    color: #fff;
-    text-decoration: none;
+.remember-forgot label input {
+  accent-color: #fff;
+  margin-right: 4px;
 }
 
-.remember-forgot a:hover{
-    text-decoration: underline;
+.remember-forgot a {
+  color: #fff;
+  text-decoration: none;
 }
 
-.wrapper button{
-    width:100%;
-    height: 45px;
-    background: #fff;
-    border: none;
-    outline: none;
-    border-radius: 40px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    cursor:pointer;
-    font-size: 16px;
-    color: #020000;
-    font-weight: 700;
+.remember-forgot a:hover {
+  text-decoration: underline;
 }
 
-.wrapper .register-link{
-    font-size: 14.5px;
-    text-align: center;
-    margin-top: 20px;
+.wrapper button {
+  width: 100%;
+  height: 45px;
+  background: #fff;
+  border: none;
+  outline: none;
+  border-radius: 40px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  cursor: pointer;
+  font-size: 16px;
+  color: #020000;
+  font-weight: 700;
+}
+
+.wrapper .register-link {
+  font-size: 14.5px;
+  text-align: center;
+  margin-top: 20px;
 }
 
 .register-link p a {
-    color: #fff;
-    text-decoration: none;
-    font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
 }
 
-.register-link p a:hover{
-    text-decoration: underline;
+.register-link p a:hover {
+  text-decoration: underline;
 }
 
 .forgot-password-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5); /* Fundal transparent */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Asigură-te că fereastra este deasupra altor elemente */
-  }
-  
-  .modal-content {
-    background: #161111;
-    padding: 20px;
-    border-radius: 10px;
-    width: 300px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .modal-content h2 {
-    margin-bottom: 20px;
-  }
-  
-  .modal-content form {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .modal-content input {
-    margin-bottom: 10px;
-    padding: 8px;
-    border: 1px solid #080808;
-    border-radius: 5px;
-  }
-  
-  .modal-content button {
-    background-color: #007bff;
-    color: white;
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-  
-  .modal-content button[type="button"] {
-    background-color: #f44336; 
-  }
-  
-  .modal-content button:hover {
-    background-color: #0056b3;
-  }
-  
-  .modal-content button[type="button"]:hover {
-    background-color: #d32f2f;
-  }
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Fundal transparent */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Asigură-te că fereastra este deasupra altor elemente */
+}
+
+.modal-content {
+  background: #161111;
+  padding: 20px;
+  border-radius: 10px;
+  width: 300px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h2 {
+  margin-bottom: 20px;
+}
+
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content input {
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #080808;
+  border-radius: 5px;
+}
+
+.modal-content button {
+  background-color: #007bff;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.modal-content button[type="button"] {
+  background-color: #f44336;
+}
+
+.modal-content button:hover {
+  background-color: #0056b3;
+}
+
+.modal-content button[type="button"]:hover {
+  background-color: #d32f2f;
+}
 
 .remember-forgot button {
   background: none;
@@ -163,12 +175,12 @@
   border: none;
   text-decoration: underline;
   cursor: pointer;
-  font-size: 14px; 
+  font-size: 14px;
   padding: 0;
   margin: 0;
-  height: auto; 
+  height: auto;
   width: auto;
-  box-shadow:none;
+  box-shadow: none;
 }
 
 .remember-forgot button:hover {
@@ -176,20 +188,19 @@
   text-decoration: none;
 }
 
-/* Stil pentru "Register" */
 .register-link button {
   background: none;
   color: #fff;
   border: none;
   text-decoration: underline;
   cursor: pointer;
-  font-size: 14px; 
+  font-size: 14px;
   padding: 0;
   margin: 0;
-  height: auto; 
+  height: auto;
   width: auto;
   margin-left: 10px;
-  box-shadow:none;
+  box-shadow: none;
 }
 
 .register-link button:hover {

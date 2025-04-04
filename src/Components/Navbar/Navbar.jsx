@@ -1,20 +1,27 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import './Navbar.css'; // Asigură-te că CSS-ul este importat corect
+import { AuthContext } from '../../context/AuthContext'; // Importă contextul pentru a accesa autentificarea
+import './Navbar.css';
 
 const Navbar = () => {
-  // Verifică dacă utilizatorul este autentificat
-  const isAuthenticated = localStorage.getItem('token');
+  const { isAuthenticated, logout } = useContext(AuthContext); // Obține statusul autentificării și funcția de logout
 
   return (
     <div className="navbar">
-      {isAuthenticated && (  // Verifică dacă există tokenul în localStorage
+      {isAuthenticated && (  // Verifică dacă utilizatorul este autentificat
         <>
-          <Link to="/home">Acasă</Link>
-          <Link to="/add-income">Adaugă Venituri</Link>
-          <Link to="/add-expense">Adaugă Cheltuieli</Link>
-          <Link to="/statistics">Statistici</Link>
+          <Link to="/home" className="navbar-link">Acasă</Link>
+          <Link to="/add-income" className="navbar-link">Adaugă Venituri</Link>
+          <Link to="/add-expense" className="navbar-link">Adaugă Cheltuieli</Link>
+          <Link to="/statistics" className="navbar-link">Statistici</Link>
         </>
+      )}
+      
+      {/* Butonul de logout (vizibil doar dacă utilizatorul este autentificat) */}
+      {isAuthenticated ? (
+        <button className="logout-button" onClick={logout}>Logout</button>
+      ) : (
+        <Link to="/login" className="navbar-link">Login</Link>
       )}
     </div>
   );

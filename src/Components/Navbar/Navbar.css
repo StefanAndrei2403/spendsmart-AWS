@@ -1,33 +1,55 @@
 /* Setează NavBar-ul pentru a fi fixat în partea de sus */
 .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: #333; /* Culoare de fundal */
-    display: flex;
-    justify-content: space-evenly; /* Distribuie butoanele uniform */
-    align-items: center; /* Aliniază butoanele pe verticală */
-    padding: 10px 0; /* Adaugă spațiu la sus și jos */
-    z-index: 1000; /* Asigură-te că NavBar-ul este deasupra celorlalte elemente */
-  }
-  
-  .navbar a {
-    color: white;
-    text-decoration: none;
-    padding: 10px 20px;
-    font-size: 18px;
-    text-align: center;
-    flex: 1; /* Fiecare buton ocupă o fracțiune egală din lățimea NavBar-ului */
-  }
-  
-  .navbar a:hover {
-    background-color: #ddd;
-    color: black;
-  }
-  
-  /* Pentru a adăuga un pic de margine inferioară, poți adăuga această regulă */
-  body {
-    margin-top: 60px; /* Spațiu pentru a evita că butoanele să acopere conținutul de sus */
-  }
-  
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #333; /* Culoare de fundal */
+  display: flex;
+  justify-content: space-evenly; /* Distribuie butoanele uniform */
+  align-items: center; /* Aliniază butoanele pe verticală */
+  padding: 10px 0; /* Adaugă spațiu la sus și jos */
+  z-index: 1000; /* Asigură-te că NavBar-ul este deasupra celorlalte elemente */
+}
+
+.navbar-link {
+  color: white;
+  text-decoration: none;
+  padding: 10px 20px;
+  font-size: 18px;
+  text-align: center;
+  flex: 1; /* Fiecare buton ocupă o fracțiune egală din lățimea NavBar-ului */
+  transition: background-color 0.3s ease; /* Adaugă tranziție pentru hover */
+}
+
+.navbar-link:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+/* Stil pentru butonul de logout */
+.logout-button {
+  color: white;
+  background-color: #f44336; /* Culoare de fundal pentru buton */
+  padding: 10px 20px;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease; /* Adaugă tranziție la hover */
+  font-weight: bold;
+}
+
+.logout-button:hover {
+  background-color: #e57373; /* Culoare mai deschisă la hover */
+  border: none;
+}
+
+.logout-button:focus {
+  outline: none; /* Înlătură outline-ul la focus pentru un aspect mai curat */
+}
+
+/* Pentru a adăuga un pic de margine inferioară, poți adăuga această regulă */
+body {
+  margin-top: 120px; /* Spațiu pentru a evita că butoanele să acopere conținutul de sus */
+}

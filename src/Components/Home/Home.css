@@ -1,44 +1,175 @@
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 .home-container {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px;
-  }
-  
-  .left-container {
-    width: 45%;
-    padding: 20px;
-    border-right: 2px solid #ccc;
-  }
-  
-  .right-container {
-    width: 45%;
-    padding: 20px;
-  }
-  
-  .financial-summary {
-    margin-bottom: 20px;
-  }
-  
-  .financial-summary div {
-    margin-bottom: 10px;
-  }
-  
-  .expense-list ul {
-    list-style-type: none;
-    padding-left: 0;
-  }
-  
-  .expense-list li {
-    margin-bottom: 5px;
-  }
-  
-  .chart {
-    max-width: 500px;
-    margin: 0 auto;
-  }
-  
-  h3 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
-  }
-  
+  display: flex;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.left-container {
+  width: 25%;
+  padding: 20px;
+  border-right: 2px solid #ccc;
+  margin-left: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+/* Right container */
+.right-container {
+  width: 75%;
+  padding: 20px;
+  flex-grow: 1;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.chart-container {
+  max-width: 600px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(15, 17, 7, 0.6), rgba(7, 6, 19, 0.8)); /* Fundal mai închis și aproape negru */
+  border-radius: 12px;
+  padding: 20px;
+  transition: transform 0.3s ease-in-out;
+  height: 350px;
+  overflow: hidden;
+  color:#fff;
+}
+
+.chart-container:hover {
+  transform: scale(1.05);
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.summary-card {
+  background-color: #fff;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-card h3 {
+  font-size: 18px;
+  color: #333;
+  margin: 0;
+}
+
+.summary-card p {
+  font-size: 22px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.summary-card .highlight p {
+  color: #27ae60;
+}
+
+.summary-card .negative p {
+  color: #e74c3c;
+}
+
+.highlight {
+  background-color: #d3f9d8;
+}
+
+.positive {
+  color: green;
+}
+
+.negative {
+  color: red;
+}
+
+.expenses-ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.expense-category {
+  font-weight: bold;
+  color: #007bff;
+  flex: 1;
+}
+
+.expense-amount {
+  font-weight: bold;
+  color: #dc3545;
+  flex: 1;
+  text-align: center;
+}
+
+.expense-date {
+  font-size: 0.9em;
+  color: #6c757d;
+  flex: 1;
+  text-align: right;
+}
+
+.expense-list {
+  width: auto;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.expense-list h3 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.expense-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.expense-list li {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* Stil pentru canvas-ul graficului */
+.chart-container canvas {
+  border-radius: 10px;
+  height: 200px; /* Ajustează înălțimea graficului */
+  color: #fff;
+}
+
+/* Stil pentru titlul din grafic */
+.chart-container h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff; /* Alb pentru titlu */
+  margin-bottom: 15px;
+  font-weight: bold; /* Font bold */
+}

@@ -1,19 +1,36 @@
-// middleware/auth.js
 const jwt = require('jsonwebtoken');
-const User = require('../models/User.js');
+const dotenv = require('dotenv');
+dotenv.config();
 
 module.exports = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Extrage tokenul din header-ul 'Authorization'
+  // Acceptă token din: 1) Header, 2) Cookies, 3) Body
+  const token = 
+    req.headers.authorization?.split(' ')[1] || 
+    req.cookies?.token ||
+    req.body?.token;
+    
 
   if (!token) {
-    return res.status(401).json({ message: 'Nu ești autentificat!' });
+    console.log('❌ Token lipsă din toate sursele');
+    return res.status(401).json({ 
+      message: 'Token missing!',
+      redirectToLogin: true
+    });
   }
 
   try {
-    const decoded = jwt.verify(token, 'SECRET_KEY'); // Verifică token-ul
-    req.userId = decoded.id; // Salvează id-ul utilizatorului pentru a-l folosi în rutele următoare
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('✅ Token valid pentru user ID:', decoded.id);
+    
+    req.userId = decoded.id; // Adaugă userId în request
+    req.user = decoded; // Adaugă întregul obiect user în request
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Token invalid sau expirat!' });
+    console.error('❌ Token invalid:', error.message);
+    return res.status(401).json({ 
+      message: 'Token invalid or expired!',
+      redirectToLogin: true
+    });
+    
   }
 };

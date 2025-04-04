@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const path = require('path');
+const auth = require('./middleware/auth');
+
 
 // Încarcă variabilele din fișierul .env
 dotenv.config({ path: './.env' });
@@ -16,10 +18,15 @@ dotenv.config({ path: './.env' });
 const app = express();
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3000','http://localhost:5000','https://white-hill-07c276010.6.azurestaticapps.net','https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net','http://localhost:8080'],
-  methods: 'GET,POST',
-  allowedHeaders: 'Content-Type,Authorization'
+  origin: ['http://localhost:3000', 'http://localhost:5000', 'https://white-hill-07c276010.6.azurestaticapps.net', 'https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net', 'http://localhost:8080'],
+  methods: 'GET,POST,PUT,DELETE, OPTIONS',
+  allowedHeaders: 'Content-Type,Authorization',
+  credentials: true,
+  exposedHeaders: ['Authorization', 'Set-Cookie'],
+  sameSite: 'None',
+  secure: false,
 }));
+
 
 // Crează conexiunea la baza de date PostgreSQL
 const pool = new Pool({
@@ -54,7 +61,7 @@ app.post('/login', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Utilizator inexistent' }); 
+      return res.status(404).json({ message: 'Utilizator inexistent' });
     }
 
     const user = result.rows[0];
@@ -64,15 +71,52 @@ app.post('/login', async (req, res) => {
     }
 
     // Generează token JWT
-    const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    console.log('✅ Autentificare reușită pentru utilizator:', user.username); // Debugging
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    console.log("✅ Token generat:", token);  // 🔍 Log pentru debugging
+    console.log("🔑 JWT_SECRET folosit:", process.env.JWT_SECRET); // 🔎 Verificare secret
 
-    res.status(200).json({ message: 'Autentificare reușită', token });
+    // Salvează token-ul în baza de date
+    await pool.query(
+      'INSERT INTO user_tokens (user_id, token) VALUES ($1, $2)',
+      [user.id, token]
+    );
+
+    // Configurează răspunsul
+    const responseData = {
+      message: 'Autentificare reușită',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    };
+
+    // Setează cookie-ul doar pentru browser
+    res
+      .cookie('auth_token', token, {
+        httpOnly: true,
+        sameSite: 'None',
+        maxAge: 3600000, // 1 oră
+      })
+      .header('Authorization', `Bearer ${token}`)
+      .status(200)
+      .json(responseData);
+
   } catch (err) {
     console.error('Eroare la login:', err);
     res.status(500).json({ message: 'Eroare la server' });
   }
 });
+
 
 // Endpoint de înregistrare 
 app.post('/register', async (req, res) => {
@@ -142,7 +186,7 @@ app.post('/google-login', async (req, res) => {
     const generateRandomPassword = () => {
       return crypto.randomBytes(8).toString('hex'); // Generează o parolă de 16 caractere
     };
-  
+
     const randomPassword = generateRandomPassword();
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -151,6 +195,20 @@ app.post('/google-login', async (req, res) => {
       'UPDATE users SET password = $1 WHERE id = $2',
       [hashedPassword, user.id]
     );
+
+    // Generare token JWT
+    const tokenJWT = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Setează token-ul JWT în cookie
+    res.cookie('auth_token', tokenJWT, {
+      httpOnly: true,
+      sameSite: 'None',  // Pentru a permite cookie-urile cross-site (dacă aplicația ta are frontend pe un domeniu diferit)
+      secure: false,      // Asigură-te că folosești HTTPS
+      maxAge: 3600000,   // Valabilitatea cookie-ului (1 oră)
+    });
+
+    // Trimite token-ul JWT și în răspuns
+    res.status(200).json({ token: tokenJWT });
 
     // Trimite parola generată pe email
     const mailOptions = {
@@ -166,7 +224,6 @@ app.post('/google-login', async (req, res) => {
         return res.status(500).json({ message: 'Eroare la trimiterea emailului' });
       }
       console.log("Trimit email la:", payload.email, "cu parola:", randomPassword);
-      res.status(200).json({ message: 'Autentificare Google reușită, parola temporară trimisă pe email!' });
     });
 
   } catch (error) {
@@ -175,25 +232,57 @@ app.post('/google-login', async (req, res) => {
   }
 });
 
+
 // Middleware pentru verificarea autentificării
 const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization'];
+  // Extrage token-ul din Authorization header
+  const token = req.headers['authorization']?.split(' ')[1];
+
   if (!token) {
-    return res.status(403).json({ message: 'Acces interzis, token lipsă' });
+    return res.status(403).json({ message: 'Nu ai un token valid' });
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(401).json({ message: 'Token invalid' });
+      return res.status(401).json({ message: 'Token invalid sau expirat' });
     }
+
     req.user = decoded;
     next();
   });
 };
 
 // Endpoint protejat - exemplu
-app.get('/profile', verifyToken, (req, res) => {
-  res.status(200).json({ message: 'Acces permis', user: req.user });
+app.get('/profile', auth, async (req, res) => {
+  try {
+    const userId = req.userId;  // `auth` middleware-ul adaugă `userId` în req
+
+    if (!userId) {
+      return res.status(400).json({ message: 'ID-ul utilizatorului nu este valid' });
+    }
+
+    // Interoghează baza de date pentru a obține informațiile utilizatorului
+    const result = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [userId]);
+    const user = result.rows[0];
+
+    if (user) {
+      // Dacă utilizatorul există în baza de date, returnează informațiile
+      res.status(200).json({
+        message: 'Acces permis',
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      });
+    } else {
+      // Dacă utilizatorul nu a fost găsit
+      res.status(404).json({ message: 'Utilizatorul nu a fost găsit' });
+    }
+  } catch (error) {
+    console.error('Eroare la obținerea profilului:', error);
+    res.status(500).json({ message: 'Eroare server' });
+  }
 });
 
 const PORT = process.env.PORT || 8080;
@@ -221,7 +310,7 @@ transporter.verify((error, success) => {
 // Endpoint pentru recuperarea parolei după username
 app.post('/recover-password-username', async (req, res) => {
   const { username } = req.body;
-  
+
   if (!username) {
     return res.status(400).json({ message: 'Username-ul este necesar' });
   }
@@ -355,8 +444,8 @@ const handleGoogleLoginSuccess = async (req, res) => {
   try {
     const ticket = await google.auth.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID, 
-    });    
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
 
     const { sub: googleId, email, name, picture } = ticket.getPayload();
 
@@ -423,6 +512,263 @@ app.get('/get-financials', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Eroare la server' });
   }
 });
+
+
+app.post('/logout', verifyToken, async (req, res) => {
+  const token = req.cookies['auth_token'];
+
+  // Șterge token-ul din baza de date
+  await pool.query('DELETE FROM user_tokens WHERE token = $1', [token]);
+
+  // Șterge cookie-ul
+  res.clearCookie('auth_token');
+
+  res.status(200).send('Logged out successfully');
+});
+
+app.get('/verify-token', (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ message: 'Nu ești autentificat' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: 'Token invalid sau expirat' });
+    }
+    return res.status(200).json({ message: 'Autentificat cu succes' });
+  });
+});
+
+app.post('/verify-token', (req, res) => {
+  const authHeader = req.headers.authorization;
+  console.log("🔍 Headers primite:", req.headers); // 🟢 Debug
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log("❌ Token lipsă sau format invalid");
+    return res.status(401).json({ message: 'Token missing or invalid' });
+  }
+
+  const token = authHeader.split(' ')[1]; // Extrage token-ul din header
+  console.log("📜 Token extras:", token); // 🟢 Debug
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      console.log("❌ Eroare la verificare:", err.message); // 🟢 Debug
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    console.log("✅ Token valid, utilizator:", decoded); // 🟢 Debug
+    res.json({ isValid: true, user: decoded });
+
+    console.log("🔑 JWT_SECRET folosit la verificare:", process.env.JWT_SECRET);
+  });
+});
+
+
+const deleteExpiredTokens = async () => {
+  try {
+    const expirationTime = Math.floor(Date.now() / 1000) - 3600; // Cu 1 oră în urmă
+    await pool.query('DELETE FROM user_tokens WHERE created_at < TO_TIMESTAMP($1)', [expirationTime]);
+    console.log('✔ Token-urile expirate au fost șterse.');
+  } catch (error) {
+    console.error('❌ Eroare la ștergerea token-urilor expirate:', error);
+  }
+};
+setInterval(deleteExpiredTokens, 10 * 60 * 1000); // Rulează la fiecare 10 minute
+
+app.get('/api/protected-route', (req, res) => {
+  try {
+    console.log("Headers received:", req.headers);
+    const token = req.headers.authorization?.split(" ")[1]; // Extrage doar token-ul
+    console.log("Token primit:", token);
+
+    if (!token) {
+      return res.status(401).json({ message: "Token lipsă" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Token decodat:", decoded);
+
+    res.json({ message: "Acces permis", user: decoded });
+  } catch (error) {
+    console.error("❌ Token invalid:", error.message);
+    res.status(401).json({ message: "Token invalid" });
+  }
+});
+
+// Aplicarea middleware-ului pe rutele care necesită autentificare
+app.use('/protected', auth, (req, res) => {
+  res.status(200).json({
+    message: 'Acces permis',
+    user: req.user, // Poți accesa obiectul user din middleware
+  });
+});
+
+// Endpoint pentru adăugarea unei categorii
+app.post('/categories', verifyToken, async (req, res) => {
+  const { name, description } = req.body;
+  const userId = req.user.id;
+
+  if (!name || !description) {
+    return res.status(400).json({ message: 'Numele și descrierea sunt necesare' });
+  }
+
+  try {
+    // Adaugă categoria în baza de date
+    const result = await pool.query(
+      'INSERT INTO expenses_categories (user_id, name, description) VALUES ($1, $2, $3) RETURNING id, name, description',
+      [userId, name, description]
+    );
+
+    res.status(201).json({
+      message: 'Categorie adăugată cu succes',
+      category: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Eroare la adăugarea categoriei:', err);
+    res.status(500).json({ message: 'Eroare la server' });
+  }
+});
+
+// Endpoint pentru obținerea categoriilor unui utilizator
+app.get('/categories', verifyToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    // Obține categoriile din baza de date
+    const result = await pool.query(
+      'SELECT id, name, description FROM expenses_categories WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Nu există categorii pentru acest utilizator' });
+    }
+
+    res.status(200).json({ categories: result.rows });
+  } catch (err) {
+    console.error('Eroare la obținerea categoriilor:', err);
+    res.status(500).json({ message: 'Eroare la server' });
+  }
+});
+
+// Endpoint pentru ștergerea unei categorii
+app.delete('/categories/:id', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    // Verifică dacă categoria există
+    const result = await pool.query(
+      'SELECT * FROM expenses_categories WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Categorie inexistentă' });
+    }
+
+    // Șterge categoria
+    await pool.query('DELETE FROM expenses_categories WHERE id = $1', [id]);
+
+    res.status(200).json({ message: 'Categorie ștearsă cu succes' });
+  } catch (err) {
+    console.error('Eroare la ștergerea categoriei:', err);
+    res.status(500).json({ message: 'Eroare la server' });
+  }
+});
+
+app.get('/api/categories', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM expenses_categories');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ message: 'Eroare la preluarea categoriilor' });
+  }
+});
+
+app.post('/api/expenses', verifyToken, async (req, res) => {
+  try {
+    const { name, amount, date, category_id, user_id } = req.body;
+
+    if (!name || !amount || !date || !category_id || !user_id) {
+      return res.status(400).json({ message: 'Toate câmpurile sunt necesare!' });
+    }
+
+    // Obține numele categoriei bazat pe category_id
+    const categoryQuery = `SELECT name FROM expenses_categories WHERE id = $1;`;
+    const categoryResult = await pool.query(categoryQuery, [category_id]);
+
+    if (categoryResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Categoria nu există!' });
+    }
+
+    const category_name = categoryResult.rows[0].name;
+
+    // Inserează cheltuiala cu numele categoriei
+    const insertQuery = `
+      INSERT INTO expenses (name, amount, date, category_id, category_name, user_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const insertValues = [name, amount, date, category_id, category_name, user_id];
+    const insertResult = await pool.query(insertQuery, insertValues);
+
+    res.status(201).json(insertResult.rows[0]);
+  } catch (error) {
+    console.error('Eroare la adăugarea cheltuielii:', error);
+    res.status(500).json({ message: 'Eroare la adăugarea cheltuielii' });
+  }
+});
+
+app.get('/api/get-financial-data', verifyToken, async (req, res) => {
+  try {
+    const user_id = req.user.id; // Preia user_id din token
+    const currentMonth = new Date().getMonth() + 1; // Obține luna curentă (1-12)
+    const currentYear = new Date().getFullYear(); // Obține anul curent
+
+    // 1️⃣ Preia venitul utilizatorului
+    const incomeQuery = `SELECT COALESCE(SUM(amount), 0) AS total_income FROM incomes WHERE user_id = $1;`;
+    const incomeResult = await pool.query(incomeQuery, [user_id]);
+    const income = incomeResult.rows[0].total_income;
+
+
+    // 2️⃣ Preia cheltuielile utilizatorului
+    const expensesQuery = `
+      SELECT e.amount, e.date, c.name AS category 
+      FROM expenses e 
+      JOIN expenses_categories c ON e.category_id = c.id
+      WHERE e.user_id = $1;
+    `;
+    const expensesResult = await pool.query(expensesQuery, [user_id]);
+    const expenses = expensesResult.rows;
+
+    // 3️⃣ Preia bugetul lunar
+    const budgetQuery = `
+    SELECT COALESCE(amount, 0) AS monthly_budget 
+    FROM monthly_budget 
+    WHERE user_id = $1 AND month = $2 AND year = $3;
+  `;
+  const budgetResult = await pool.query(budgetQuery, [user_id, currentMonth, currentYear]);
+
+  // Dacă nu există un buget pentru luna curentă, setează-l la 0
+  const monthly_budget = budgetResult.rows.length > 0 ? budgetResult.rows[0].monthly_budget : 0;
+
+  res.json({
+    income,
+    expenses,
+    monthly_budget
+  });
+} catch (error) {
+  console.error('Eroare la obținerea datelor financiare:', error);
+  res.status(500).json({ message: 'Eroare la obținerea datelor financiare' });
+}
+});
+
+
+
 // Servește fișierele statice construite de React
 app.use(express.static(path.join(__dirname, 'build')));
 
@@ -430,4 +776,3 @@ app.use(express.static(path.join(__dirname, 'build')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
-

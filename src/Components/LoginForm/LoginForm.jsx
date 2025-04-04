@@ -1,79 +1,120 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './LoginForm.css';
-import { CiUser } from "react-icons/ci";
-import { RiLockPasswordLine } from "react-icons/ri";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { CiUser } from "react-icons/ci";
+import { RiLockPasswordLine } from "react-icons/ri";
+import { AuthContext } from '../../context/AuthContext';
 import Register from '../Register/Register';
+import './LoginForm.css';
 
 const LoginForm = () => {
+  const { login } = useContext(AuthContext); // Folosim direct funcția login din context
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [showRegister] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [recoverByUsername, setRecoverByUsername] = useState(true); // Pentru a selecta opțiunea de recuperare
   const navigate = useNavigate();
 
-  // Handler pentru Google login
-  const handleGoogleLoginSuccess = async (response) => {
-    const token = response.credential;
-    try {
-      // Trimite tokenul către server
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/google-login`, { token });
+  // Verificăm dacă există un token în localStorage și validăm dacă este valid
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      // Dacă există token, validăm token-ul cu backend
+      axios.get('/protected', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(response => {
+          console.log('Acces permis:', response.data);
+        })
+        .catch(error => {
+          console.error('Token invalid sau expirat', error);
+          navigate('/login'); // Redirecționează utilizatorul la login dacă token-ul este invalid
+        });
+    } else {
+      navigate('/login'); // Dacă nu există token, redirecționează la login
+    }
+  }, [navigate]);
 
-      // Salvează tokenul în localStorage pentru a păstra sesiunea
-      localStorage.setItem('token', res.data.token);
-      navigate('/home');
+
+  const handleGoogleLoginSuccess = async (response) => {
+    try {
+      console.log('Google login response:', response);
+  
+      const requestData = { token: response.credential };
+      console.log('Sending token to backend:', requestData);
+  
+      // Trimite cererea către backend
+      const res = await axios.post('/google-login', requestData, {
+        headers: { 'Content-Type': 'application/json' },
+        withCredentials: true,  // Asigură-te că trimite cookie-urile cu cererea
+      });
+  
+      console.log('Response from backend:', res.data);
+  
+      // Verifică dacă răspunsul conține un token
+      if (res.data.token) {
+        // Setează token-ul în context
+        login(res.data.token);
+  
+        // Salvează token-ul în localStorage pentru a fi disponibil pe termen lung
+        localStorage.setItem('auth_token', res.data.token);
+  
+        // Redirecționează utilizatorul pe pagina de home
+        navigate('/home');
+      } else {
+        setErrorMessage('Nu am primit un token valid');
+      }
     } catch (error) {
-      console.log('Eroare la autentificare cu Google.', error);
+      console.error('Google login error:', error);
+      setErrorMessage('Google authentication failed. Please try again.');
     }
   };
+  
 
-  const handleGoogleLoginFailure = (error) => {
-    setErrorMessage('Eroare la autentificare cu Google.');
+  const handleGoogleLoginFailure = () => {
+    setErrorMessage('Google login was cancelled or failed');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = showRegister 
-    ? `${process.env.REACT_APP_API_URL}/register` 
-    : `${process.env.REACT_APP_API_URL}/login`;
-
-    const data = showRegister ? { username, email, password } : { username, password };
+    setErrorMessage(''); // Resetare mesaj de eroare
 
     try {
-      const response = await axios.post(endpoint, data);
-      if (!showRegister) {
-        localStorage.setItem('token', response.data.token);
-        navigate('/home');
+      // Verifică dacă este înregistrare sau login
+      const endpoint = showRegister ? '/register' : '/login';
+      const payload = showRegister ? { username, email, password } : { username, password };
+
+      // Trimite cererea POST către server
+      const response = await axios.post(endpoint, payload, { withCredentials: true });
+
+      // Verifică dacă serverul a răspuns cu un token valid
+      if (response.status === 200) {
+        const { token } = response.data;
+
+        // Verifică dacă token-ul există și este valid
+        if (token) {
+          // Salvează token-ul în context (AuthContext)
+          login(token);
+
+          // Salvează token-ul și în localStorage pentru a fi disponibil pe termen lung
+          localStorage.setItem('auth_token', token);
+
+          // Redirecționează utilizatorul pe pagina de home
+          navigate('/home');
+        } else {
+          setErrorMessage('Failed to authenticate. Please try again.');
+        }
+      } else {
+        setErrorMessage('Authentication failed');
       }
     } catch (error) {
-      setErrorMessage(error.response?.data?.message || 'A apărut o eroare.');
+      // Gestionarea erorilor de server
+      setErrorMessage(error.response?.data?.message || 'Server communication error');
+      console.error('Authentication error:', error);
     }
-  };
-
-  // Funcție pentru a trimite cererea de recuperare parolă
-  const handleForgotPasswordSubmit = async (e) => {
-    e.preventDefault();
-    const endpoint = recoverByUsername 
-    ? `${process.env.REACT_APP_API_URL}/recover-password-username` 
-    : `${process.env.REACT_APP_API_URL}/recover-password-email`;
-    const data = recoverByUsername ? { username } : { email };
-
-    try {
-      await axios.post(endpoint, data);
-      setShowForgotPassword(false);
-      alert('Email-ul a fost trimis dacă există un cont asociat!');
-    } catch (error) {
-      setErrorMessage('Eroare la trimiterea emailului.');
-    }
-  };
-
-  const handleRegisterClick = () => {
-    navigate('/register');  // Navighează direct la pagina de Register
   };
 
   return (
@@ -83,105 +124,36 @@ const LoginForm = () => {
           <h1>Login</h1>
           <div className='input-box'>
             <CiUser className='icon' />
-            <input
-              type='text'
-              placeholder='Username'
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
+            <input type='text' placeholder='Username' value={username} onChange={(e) => setUsername(e.target.value)} required />
           </div>
-
           <div className='input-box'>
             <RiLockPasswordLine className='icon' />
-            <input
-              type='password'
-              placeholder='Password'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <input type='password' placeholder='Password' value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
-
           <div className="remember-forgot">
             <label><input type="checkbox" />Remember me</label>
-            <button type="button" className="link-button" onClick={() => setShowForgotPassword(true)}>
-              Forgot password?
-            </button>
+            <button type="button" className="link-button" onClick={() => setShowForgotPassword(true)}>Forgot password?</button>
           </div>
-
           <button type="submit">Login</button>
           {errorMessage && <p>{errorMessage}</p>}
-
           <div className="register-link">
             <p>Don't have an account?
-              <button type="button" className="link-button" onClick={handleRegisterClick}>
-                Register
-              </button>
+              <button type="button" className="link-button" onClick={() => setShowRegister(true)}>Register</button>
             </p>
           </div>
         </form>
       ) : (
         <Register />
       )}
-
       {!showRegister && (
         <div className="google-login">
           <GoogleLogin
             onSuccess={handleGoogleLoginSuccess}
             onError={handleGoogleLoginFailure}
+            clientId="166245198945-gh14hvgqlcrr58re9rjdqu985srlnnvo.apps.googleusercontent.com"
+            uxMode="popup" 
           />
-        </div>
-      )}
 
-      {/* Fereastra Modală pentru Forgot Password */}
-      {showForgotPassword && (
-        <div className="forgot-password-modal">
-          <div className="modal-content">
-            <h2>Forgot Password</h2>
-            <form onSubmit={handleForgotPasswordSubmit}>
-              <label>
-                <input
-                  type="radio"
-                  name="recoverMethod"
-                  checked={recoverByUsername}
-                  onChange={() => setRecoverByUsername(true)}
-                />
-                Recuperare după username
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="recoverMethod"
-                  checked={!recoverByUsername}
-                  onChange={() => setRecoverByUsername(false)}
-                />
-                Recuperare după email
-              </label>
-              <div>
-                {recoverByUsername ? (
-                  <input
-                    type="text"
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                ) : (
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                )}
-              </div>
-              <button type="submit">Send Email</button>
-              <button type="button" onClick={() => setShowForgotPassword(false)}>Close</button>
-            </form>
-            {errorMessage && <p>{errorMessage}</p>}
-          </div>
         </div>
       )}
     </div>
