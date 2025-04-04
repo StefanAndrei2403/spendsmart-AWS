@@ -12,10 +12,10 @@ const LoginForm = () => {
   const { login } = useContext(AuthContext); // Folosim direct funcția login din context
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
+  const [email] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showRegister, setShowRegister] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
 
   // Verificăm dacă există un token în localStorage și validăm dacă este valid
