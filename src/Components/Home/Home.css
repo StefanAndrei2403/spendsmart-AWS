@@ -23,7 +23,6 @@ html, body, #root {
   height: 100%;
 }
 
-/* Right container */
 .right-container {
   width: 75%;
   padding: 20px;
@@ -33,23 +32,28 @@ html, body, #root {
 }
 
 .chart-container {
-  max-width: 600px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, rgba(15, 17, 7, 0.6), rgba(7, 6, 19, 0.8)); /* Fundal mai închis și aproape negru */
+  max-width: 650px;
+  margin: 20px auto;
+  background: linear-gradient(135deg, rgba(31, 250, 195, 0.7), rgba(37, 240, 162, 0.8));
   border-radius: 12px;
   padding: 20px;
   transition: transform 0.3s ease-in-out;
-  height: 350px;
+  height: 433px;
   overflow: hidden;
-  color:#fff;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Adaugă o umbră ușoară */
+  margin-top: 50px;
 }
 
 .chart-container:hover {
   transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Mai multă adâncire la hover */
 }
 
-h3 {
-  font-size: 1.2rem;
+.chart-container .legend {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff; /* Text alb pentru legende */
   margin-bottom: 10px;
 }
 
@@ -160,8 +164,10 @@ h3 {
 
 /* Stil pentru canvas-ul graficului */
 .chart-container canvas {
+  border: none !important;
   border-radius: 10px;
-  height: 200px; /* Ajustează înălțimea graficului */
+  height: 100% !important;
+  width: 94% !important;
   color: #fff;
 }
 
@@ -170,6 +176,14 @@ h3 {
   font-size: 1.5rem;
   font-weight: 700;
   color: #fff; /* Alb pentru titlu */
-  margin-bottom: 15px;
-  font-weight: bold; /* Font bold */
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.welcome-section {
+  margin-bottom: 30px; /* Ajustează valoarea în funcție de cât de mult spațiu vrei între secțiuni */
+}
+
+.chart-container, .chart-container h3, .chart-container p {
+  color: #fff;  /* Text alb pentru toate elementele din .chart-container */
 }

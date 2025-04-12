@@ -334,7 +334,7 @@ app.post('/recover-password-username', async (req, res) => {
     await pool.query('UPDATE users SET reset_token = $1, reset_token_expiration = $2 WHERE username = $3', [resetToken, tokenExpiration, username]);
 
     // Trimite email cu link-ul de resetare a parolei
-    const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
+    const resetLink = `http://localhost:8080/reset-password?token=${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -383,7 +383,7 @@ app.post('/recover-password-email', async (req, res) => {
     await pool.query('UPDATE users SET reset_token = $1, reset_token_expiration = $2 WHERE email = $3', [resetToken, tokenExpiration, email]);
 
     // Trimite email cu link-ul de resetare a parolei
-    const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
+    const resetLink = `http://localhost:8080/reset-password?token=${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -725,49 +725,459 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
 
 app.get('/api/get-financial-data', verifyToken, async (req, res) => {
   try {
-    const user_id = req.user.id; // Preia user_id din token
-    const currentMonth = new Date().getMonth() + 1; // Obține luna curentă (1-12)
-    const currentYear = new Date().getFullYear(); // Obține anul curent
+    const user_id = req.user.id;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentYear = now.getFullYear();   // YYYY
 
-    // 1️⃣ Preia venitul utilizatorului
-    const incomeQuery = `SELECT COALESCE(SUM(amount), 0) AS total_income FROM incomes WHERE user_id = $1;`;
-    const incomeResult = await pool.query(incomeQuery, [user_id]);
+    // 1️⃣ Venituri din luna curentă
+    const incomeQuery = `
+      SELECT COALESCE(SUM(amount), 0) AS total_income
+      FROM incomes
+      WHERE user_id = $1 AND EXTRACT(MONTH FROM date) = $2 AND EXTRACT(YEAR FROM date) = $3;
+    `;
+    const incomeResult = await pool.query(incomeQuery, [user_id, currentMonth, currentYear]);
     const income = incomeResult.rows[0].total_income;
 
-
-    // 2️⃣ Preia cheltuielile utilizatorului
+    // 2️⃣ Cheltuieli din luna curentă
     const expensesQuery = `
-      SELECT e.amount, e.date, c.name AS category 
-      FROM expenses e 
-      JOIN expenses_categories c ON e.category_id = c.id
-      WHERE e.user_id = $1;
+      SELECT e.name, e.amount, e.date
+      FROM expenses e
+      WHERE e.user_id = $1
+        AND EXTRACT(MONTH FROM e.date) = $2
+        AND EXTRACT(YEAR FROM e.date) = $3;
     `;
-    const expensesResult = await pool.query(expensesQuery, [user_id]);
+    const expensesResult = await pool.query(expensesQuery, [user_id, currentMonth, currentYear]);
     const expenses = expensesResult.rows;
 
-    // 3️⃣ Preia bugetul lunar
+    // 3️⃣ Buget lunar (deja filtrat corect)
     const budgetQuery = `
-    SELECT COALESCE(amount, 0) AS monthly_budget 
-    FROM monthly_budget 
-    WHERE user_id = $1 AND month = $2 AND year = $3;
-  `;
-  const budgetResult = await pool.query(budgetQuery, [user_id, currentMonth, currentYear]);
+      SELECT COALESCE(amount, 0) AS monthly_budget
+      FROM monthly_budget
+      WHERE user_id = $1 AND month = $2 AND year = $3;
+    `;
+    const budgetResult = await pool.query(budgetQuery, [user_id, currentMonth, currentYear]);
+    const monthly_budget = budgetResult.rows.length > 0 ? budgetResult.rows[0].monthly_budget : 0;
 
-  // Dacă nu există un buget pentru luna curentă, setează-l la 0
-  const monthly_budget = budgetResult.rows.length > 0 ? budgetResult.rows[0].monthly_budget : 0;
-
-  res.json({
-    income,
-    expenses,
-    monthly_budget
-  });
-} catch (error) {
-  console.error('Eroare la obținerea datelor financiare:', error);
-  res.status(500).json({ message: 'Eroare la obținerea datelor financiare' });
-}
+    res.json({
+      income,
+      expenses,
+      monthly_budget
+    });
+  } catch (error) {
+    console.error('Eroare la obținerea datelor financiare:', error);
+    res.status(500).json({ message: 'Eroare la obținerea datelor financiare' });
+  }
 });
 
+app.get('/api/expenses', verifyToken, async (req, res) => {
+  try {
+    let { user_id, month, year } = req.query;
 
+    // Asigură-te că user_id este valid
+    if (!user_id) {
+      return res.status(400).json({ message: 'User ID este necesar' });
+    }
+
+    // Log pentru a vedea valorile parametrilor
+    console.log('Parametri de intrare:', { user_id, month, year });
+
+    // Convertește month și year în numere
+    month = month ? parseInt(month) : null;
+    year = year ? parseInt(year) : null;
+
+    // Pregătește interogarea
+    let query = `SELECT * FROM expenses WHERE user_id = $1`;
+    const queryParams = [user_id];
+
+    if (month) {
+      // Validăm și adăugăm parametrii pentru lună
+      if (isNaN(month) || month < 1 || month > 12) {
+        return res.status(400).json({ message: 'Luna trebuie să fie între 1 și 12' });
+      }
+      query += ` AND EXTRACT(MONTH FROM date) = $2`;
+      queryParams.push(month);
+    }
+
+    if (year) {
+      // Validăm și adăugăm parametrii pentru anul
+      if (isNaN(year) || year.toString().length !== 4) {
+        return res.status(400).json({ message: 'Anul trebuie să fie valid' });
+      }
+      query += ` AND EXTRACT(YEAR FROM date) = $3`;
+      queryParams.push(year);
+    }
+
+    console.log('Interogare finală:', query);
+    console.log('Parametri interogare:', queryParams);
+
+    // Execută interogarea
+    const result = await pool.query(query, queryParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Nu există cheltuieli în luna și anul selectat' });
+    }
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Eroare la obținerea cheltuielilor:', error);
+    res.status(500).json({ message: 'Eroare la obținerea cheltuielilor' });
+  }
+});
+
+// Adaugă venit
+app.post('/api/incomes', async (req, res) => {
+  const { name, amount, date, user_id } = req.body;
+  try {
+    const newIncome = await pool.query(
+      'INSERT INTO incomes (name, amount, date, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, amount, date, user_id]
+    );
+    res.json(newIncome.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Eroare la adăugarea venitului');
+  }
+});
+
+// Obține venituri filtrate după lună/an
+app.get('/api/incomes', async (req, res) => {
+  const { user_id, month, year } = req.query;
+  try {
+    const incomes = await pool.query(
+      `SELECT * FROM incomes 
+       WHERE user_id = $1 AND EXTRACT(MONTH FROM date) = $2 AND EXTRACT(YEAR FROM date) = $3 
+       ORDER BY date DESC`,
+      [user_id, month, year]
+    );
+    res.json(incomes.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Eroare la obținerea veniturilor');
+  }
+});
+
+// Editează venit
+app.put('/api/incomes/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, amount, date } = req.body;
+  try {
+    await pool.query(
+      'UPDATE incomes SET name = $1, amount = $2, date = $3 WHERE id = $4',
+      [name, amount, date, id]
+    );
+    res.send('Venitul a fost actualizat');
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Eroare la actualizarea venitului');
+  }
+});
+
+// ------------------ BUGET LUNAR ------------------
+
+// Salvează / actualizează bugetul lunar
+app.post('/api/monthly_budget', async (req, res) => {
+  const { user_id, month, year, amount } = req.body;
+
+  // Validare pentru amount (dacă este pozitiv)
+  if (amount <= 0) {
+    return res.status(400).send('Bugetul trebuie să fie o valoare pozitivă');
+  }
+
+  try {
+    const existing = await pool.query(
+      'SELECT * FROM monthly_budget WHERE user_id = $1 AND month = $2 AND year = $3',
+      [user_id, month, year]
+    );
+
+    if (existing.rows.length > 0) {
+      // Actualizează bugetul
+      await pool.query(
+        'UPDATE monthly_budget SET amount = $1 WHERE user_id = $2 AND month = $3 AND year = $4',
+        [amount, user_id, month, year]
+      );
+      res.send('Bugetul a fost actualizat');
+    } else {
+      // Adaugă bugetul
+      await pool.query(
+        'INSERT INTO monthly_budget (user_id, month, year, amount) VALUES ($1, $2, $3, $4)',
+        [user_id, month, year, amount]
+      );
+      res.send('Bugetul a fost adăugat');
+    }
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Eroare la salvarea bugetului');
+  }
+});
+
+// Obține bugetul lunar
+app.get('/api/monthly_budget', async (req, res) => {
+  const { user_id, month, year } = req.query;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM monthly_budget WHERE user_id = $1 AND month = $2 AND year = $3',
+      [user_id, month, year]
+    );
+    res.json(result.rows[0] || {}); // Dacă nu există niciun rezultat, returnează un obiect gol
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Eroare la obținerea bugetului');
+  }
+});
+
+app.get('/api/statistics', async (req, res) => {
+  const { user_id, type, year, month, week, day, category } = req.query;
+
+  // Logăm valorile primite în request
+  console.log('Received request with params:', req.query);
+
+  let query = '';
+  let queryParams = [user_id];
+
+  // Definirea interogărilor pentru fiecare tip de statistică
+  switch (type) {
+    case 'general':
+      query = `
+        WITH months AS (
+          SELECT generate_series(
+            (SELECT DATE_TRUNC('month', MIN(date)) FROM expenses WHERE user_id = $1),
+            (SELECT DATE_TRUNC('month', MAX(date)) FROM expenses WHERE user_id = $1),
+            interval '1 month'
+          ) AS period
+        )
+        SELECT 
+          TO_CHAR(m.period, 'YYYY-MM') AS period,
+          COALESCE(SUM(DISTINCT e.amount), 0) AS expenses_sum,
+          COALESCE(SUM(DISTINCT i.amount), 0) AS incomes_sum,
+          COALESCE(SUM(DISTINCT b.amount), 0) AS budget_sum
+        FROM months m
+        LEFT JOIN expenses e ON DATE_TRUNC('month', e.date) = m.period AND e.user_id = $1
+        LEFT JOIN incomes i ON DATE_TRUNC('month', i.date) = m.period AND i.user_id = $1
+        LEFT JOIN monthly_budget b ON b.month = EXTRACT(MONTH FROM m.period) AND b.year = EXTRACT(YEAR FROM m.period) AND b.user_id = $1
+        GROUP BY m.period
+        ORDER BY m.period;
+      `;
+      break;
+
+    case 'category':
+      query = `
+    SELECT
+    e.name AS name,
+      CASE
+        WHEN ec.is_essential THEN 'Necesar'
+        ELSE 'Opțional'
+      END AS category,
+      SUM(e.amount) AS amount
+    FROM expenses e
+    JOIN expenses_categories ec ON e.category_id = ec.id
+    WHERE e.user_id = $1
+      ${year ? 'AND EXTRACT(YEAR FROM e.date) = $2' : ''}
+      ${month ? 'AND EXTRACT(MONTH FROM e.date) = $3' : ''}
+    GROUP BY e.name, category;
+  `;
+      if (year) queryParams.push(year);
+      if (month) queryParams.push(month);
+      break;
+
+    case 'trend':
+      query = `
+        SELECT
+          TO_CHAR(e.date, 'YYYY-MM') AS period,
+          SUM(e.amount) AS expenses_sum,
+          SUM(i.amount) AS incomes_sum,
+          SUM(i.amount) - SUM(e.amount) AS savings
+        FROM
+          expenses e
+          LEFT JOIN incomes i ON TO_CHAR(e.date, 'YYYY-MM') = TO_CHAR(i.date, 'YYYY-MM')
+        WHERE e.user_id = $1
+        GROUP BY
+          TO_CHAR(e.date, 'YYYY-MM')
+        ORDER BY
+          period;
+      `;
+      break;
+
+    case 'annual':
+      query = `
+          SELECT
+            EXTRACT(YEAR FROM e.date) AS year,
+            COALESCE(SUM(e.amount), 0) AS expenses_sum,
+            COALESCE(SUM(i.amount), 0) AS incomes_sum,
+            COALESCE(SUM(b.amount), 0) AS budget_sum
+          FROM
+            expenses e
+            LEFT JOIN incomes i ON EXTRACT(YEAR FROM e.date) = EXTRACT(YEAR FROM i.date)
+            LEFT JOIN monthly_budget b ON b.year = EXTRACT(YEAR FROM e.date)
+          WHERE e.user_id = $1
+          GROUP BY
+            EXTRACT(YEAR FROM e.date)
+          ORDER BY
+            year;
+        `;
+      break;
+
+    case 'monthly':
+      query = `
+        SELECT
+          TO_CHAR(e.date, 'YYYY-MM') AS period,
+          SUM(e.amount) AS expenses_sum,
+          SUM(i.amount) AS incomes_sum,
+          SUM(b.amount) AS budget_sum
+        FROM
+          expenses e
+          LEFT JOIN incomes i ON TO_CHAR(e.date, 'YYYY-MM') = TO_CHAR(i.date, 'YYYY-MM')
+          LEFT JOIN monthly_budget b ON b.month = EXTRACT(MONTH FROM e.date) AND b.year = EXTRACT(YEAR FROM e.date)
+        WHERE e.user_id = $1 AND EXTRACT(YEAR FROM e.date) = $2
+        GROUP BY
+          TO_CHAR(e.date, 'YYYY-MM')
+        ORDER BY
+          period;
+      `;
+      queryParams.push(year); // Only filter by the selected year
+      break;
+
+      case 'budgetComparison':
+  if (year && month && day) {
+    query = `
+      SELECT
+        TO_CHAR(e.date, 'YYYY-MM-DD') AS period,
+        COALESCE(SUM(e.amount), 0) AS expenses_sum,
+        COALESCE(SUM(b.amount), 0) AS budget_sum
+      FROM expenses e
+      LEFT JOIN monthly_budget b ON b.year = EXTRACT(YEAR FROM e.date) AND b.month = EXTRACT(MONTH FROM e.date) AND b.user_id = $1
+      WHERE e.user_id = $1 AND EXTRACT(YEAR FROM e.date) = $2 AND EXTRACT(MONTH FROM e.date) = $3 AND EXTRACT(DAY FROM e.date) = $4
+      GROUP BY period
+      ORDER BY period;
+    `;
+    queryParams.push(year, month, day);
+  } else if (year && month) {
+    query = `
+      SELECT
+        TO_CHAR(e.date, 'YYYY-MM') AS period,
+        COALESCE(SUM(e.amount), 0) AS expenses_sum,
+        COALESCE(SUM(b.amount), 0) AS budget_sum
+      FROM expenses e
+      LEFT JOIN monthly_budget b ON b.year = EXTRACT(YEAR FROM e.date) AND b.month = EXTRACT(MONTH FROM e.date) AND b.user_id = $1
+      WHERE e.user_id = $1 AND EXTRACT(YEAR FROM e.date) = $2 AND EXTRACT(MONTH FROM e.date) = $3
+      GROUP BY period
+      ORDER BY period;
+    `;
+    queryParams.push(year, month);
+  } else if (year) {
+    query = `
+      SELECT
+        TO_CHAR(e.date, 'YYYY-MM') AS period,
+        COALESCE(SUM(e.amount), 0) AS expenses_sum,
+        COALESCE(SUM(b.amount), 0) AS budget_sum
+      FROM expenses e
+      LEFT JOIN monthly_budget b ON b.year = EXTRACT(YEAR FROM e.date) AND b.month = EXTRACT(MONTH FROM e.date) AND b.user_id = $1
+      WHERE e.user_id = $1 AND EXTRACT(YEAR FROM e.date) = $2
+      GROUP BY period
+      ORDER BY period;
+    `;
+    queryParams.push(year);
+  } else {
+    query = `
+      SELECT
+        TO_CHAR(e.date, 'YYYY-MM') AS period,
+        COALESCE(SUM(e.amount), 0) AS expenses_sum,
+        COALESCE(SUM(b.amount), 0) AS budget_sum
+      FROM expenses e
+      LEFT JOIN monthly_budget b ON b.year = EXTRACT(YEAR FROM e.date) AND b.month = EXTRACT(MONTH FROM e.date) AND b.user_id = $1
+      WHERE e.user_id = $1
+      GROUP BY period
+      ORDER BY period;
+    `;
+  }
+  break;
+
+    case 'unplannedExpenses':
+      query = `
+        SELECT
+          TO_CHAR(e.date, 'YYYY-MM') AS period,
+          COALESCE(SUM(e.amount), 0) AS expenses_sum,
+          COALESCE(SUM(i.amount), 0) AS incomes_sum,
+          COALESCE(SUM(b.amount), 0) AS budget_sum,
+          COALESCE(SUM(i.amount), 0) - COALESCE(SUM(e.amount), 0) AS budget_difference
+        FROM
+          expenses e
+          LEFT JOIN incomes i ON TO_CHAR(e.date, 'YYYY-MM') = TO_CHAR(i.date, 'YYYY-MM') AND i.user_id = $1
+          LEFT JOIN monthly_budget b ON b.month = EXTRACT(MONTH FROM e.date) AND b.year = EXTRACT(YEAR FROM e.date) AND b.user_id = $1
+        WHERE e.user_id = $1 AND (e.category_name = 'Neplanificate' OR e.category_name = 'Cheltuieli impulsive')
+        GROUP BY
+          TO_CHAR(e.date, 'YYYY-MM')
+        ORDER BY
+          period;
+      `;
+      break;
+
+    case 'daily':
+      query = `
+          SELECT
+            TO_CHAR(e.date, 'YYYY-MM-DD') AS period,
+            SUM(e.amount) AS expenses_sum,
+            SUM(i.amount) AS incomes_sum,
+            0 AS budget_sum
+          FROM
+            expenses e
+            LEFT JOIN incomes i ON TO_CHAR(e.date, 'YYYY-MM-DD') = TO_CHAR(i.date, 'YYYY-MM-DD') AND i.user_id = $1
+          WHERE e.user_id = $1
+            AND EXTRACT(YEAR FROM e.date) = $2
+            AND EXTRACT(MONTH FROM e.date) = $3
+            ${day ? `AND EXTRACT(DAY FROM e.date) = $4` : ''}
+          GROUP BY
+            TO_CHAR(e.date, 'YYYY-MM-DD')
+          ORDER BY
+            period;
+        `;
+      queryParams.push(year, month);
+      if (day) queryParams.push(day);
+      break;
+
+    default:
+      console.log('Invalid type:', type);  // Log error if the type is invalid
+      return res.status(400).json({ error: 'Tip de statistică invalid.' });
+  }
+
+  // Logăm interogarea și parametrii
+  console.log('Running query:', query);
+  console.log('With parameters:', queryParams);
+
+  try {
+    // Executăm interogarea
+    const result = await pool.query(query, queryParams);
+
+    const statisticsData = {
+      labels: result.rows.map(row => row.period),
+      expenses: result.rows.map(row => parseFloat(row.expenses_sum || 0)),
+      incomes: result.rows.map(row => parseFloat(row.incomes_sum || 0)),
+      budget: result.rows.map(row => parseFloat(row.budget_sum || 0)),
+      expensesSum: result.rows.reduce((acc, row) => acc + parseFloat(row.expenses_sum || 0), 0),
+      incomesSum: result.rows.reduce((acc, row) => acc + parseFloat(row.incomes_sum || 0), 0),
+      budgetSum: result.rows.reduce((acc, row) => acc + parseFloat(row.budget_sum || 0), 0),
+      details: result.rows,
+      savings: result.rows.map(row => parseFloat(row.savings || 0)),
+      necessaryExpenses:
+        result.rows.some(r => r.category)
+          ? result.rows.filter(row => row.category === 'Necesar')
+            .reduce((acc, row) => acc + parseFloat(row.amount || 0), 0)
+          : 0,
+
+      optionalExpenses:
+        result.rows.some(r => r.category)
+          ? result.rows.filter(row => row.category !== 'Necesar')
+            .reduce((acc, row) => acc + parseFloat(row.amount || 0), 0)
+          : 0,
+    };
+
+    res.json(statisticsData);
+  } catch (err) {
+    // Logăm eroarea
+    console.error('Error executing query:', err);
+    res.status(500).json({ error: 'A apărut o eroare la obținerea datelor.' });
+  }
+});
 
 // Servește fișierele statice construite de React
 app.use(express.static(path.join(__dirname, 'build')));

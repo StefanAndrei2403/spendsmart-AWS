@@ -11,8 +11,8 @@ const Navbar = () => {
       {isAuthenticated && (  // Verifică dacă utilizatorul este autentificat
         <>
           <Link to="/home" className="navbar-link">Acasă</Link>
-          <Link to="/add-income" className="navbar-link">Adaugă Venituri</Link>
-          <Link to="/add-expense" className="navbar-link">Adaugă Cheltuieli</Link>
+          <Link to="/add-income" className="navbar-link">Administreaza Venituri</Link>
+          <Link to="/add-expense" className="navbar-link">Administreaza Cheltuieli</Link>
           <Link to="/statistics" className="navbar-link">Statistici</Link>
         </>
       )}

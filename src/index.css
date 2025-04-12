@@ -2,8 +2,6 @@
 
 html,
 body {
-  overflow-x: hidden;
-  overflow-y: hidden;
   /* Evită scroll-ul orizontal */
 }
 
@@ -29,7 +27,6 @@ body {
 
 body::before {
   content: "";
-  /* Creăm un pseudo-element pentru fundal */
   position: absolute;
   top: 0;
   left: 0;
@@ -37,10 +34,8 @@ body::before {
   bottom: 0;
   background: url('./Components/Assets/background2.jpg') no-repeat center center;
   background-size: cover;
-  filter: blur(2px);
-  /* Aplica blur doar pe imaginea de fundal */
+  filter: blur(4px);
   z-index: -1;
-  /* Asigură-te că este sub toate celelalte elemente */
 }
 
 * {

@@ -5,7 +5,7 @@ import LoginForm from './Components/LoginForm/LoginForm';
 import Home from './Components/Home/Home';
 import ResetPassword from './Components/ResetPassword/ResetPassword';
 import Register from './Components/Register/Register';
-import AddIncome from './Components/AddIncome/AddIncome';
+import AddIncomeBudget from './Components/AddIncome/AddIncomeBudget';
 import AddExpense from './Components/AddExpense/AddExpense';
 import Statistics from './Components/Statistics/Statistics';
 import Navbar from './Components/Navbar/Navbar'; // Folosește Navbar în loc de Header
@@ -46,7 +46,7 @@ const AppRoutes = ({ isAuthenticated }) => {
       <Route path="/home" element={<Home />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/add-income" element={<AddIncome />} />
+      <Route path="/add-income" element={<AddIncomeBudget />} />
       <Route path="/add-expense" element={<AddExpense />} />
       <Route path="/statistics" element={<Statistics />} />
     </Routes>

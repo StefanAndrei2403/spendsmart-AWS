@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Bar } from 'react-chartjs-2';
+import { Doughnut } from 'react-chartjs-2';  
 import './Home.css';
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
+  ArcElement, // Adaugă ArcElement pentru a crea un Donut Chart
   Title,
   Tooltip,
   Legend
@@ -15,9 +13,7 @@ import { useNavigate } from 'react-router-dom';
 
 // Register ChartJS components
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
+  ArcElement, // Înregistrează ArcElement pentru a crea un Donut Chart
   Title,
   Tooltip,
   Legend
@@ -31,6 +27,10 @@ const Home = () => {
   const [monthlyBudget, setMonthlyBudget] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const currentDate = new Date();
+const monthName = currentDate.toLocaleString('ro-RO', { month: 'long' });
+const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,84 +95,119 @@ const Home = () => {
 
   // Prepare chart data
   const chartData = {
-    labels: ['Buget Lunar', 'Cheltuieli Totale'],
+    labels: ['Cheltuieli', 'Ramas din buget'],
     datasets: [
       {
-        label: 'Suma (RON)',
-        data: [monthlyBudget, totalExpenses],
+        data: [totalExpenses, remainingBudget],
         backgroundColor: [
-          'rgba(75, 192, 192, 0.8)', // Gradinat mai subtil
-          'rgba(255, 99, 132, 0.8)' // Gradinat mai subtil
+          'rgba(255, 99, 132, 0.8)', 
+          'rgba(75, 192, 192, 0.8)' 
         ],
         borderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 99, 132, 1)'
+          'rgba(255, 99, 132, 1)',  
+          'rgba(75, 192, 192, 1)'   
         ],
-        borderWidth: 1,
+        borderWidth: 2,
         hoverBackgroundColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 99, 132, 1)'
+          'rgba(255, 99, 132, 1)', 
+          'rgba(75, 192, 192, 1)'
         ],
         hoverBorderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 99, 132, 1)'
+          'rgba(255, 99, 132, 1)',
+          'rgba(75, 192, 192, 1)'
         ]
       }
     ]
   };
 
-  // Chart options
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: false, // Permite dimensionarea automată
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top',
         labels: {
           font: {
-            size: 14, // Modifică dimensiunea fontului legendei
-            weight: 'bold' // Face fontul legendei mai îndrăzneț
-          }
+            size: 16,
+            weight: 'bold',
+            family: 'Arial, sans-serif'
+          },
+          padding: 20
         }
       },
       title: {
         display: true,
-        text: 'Buget vs Cheltuieli',
+        text: 'Comparație Buget vs Cheltuieli',
         font: {
-          size: 18,
+          size: 20,
           weight: 'bold',
-          family: 'Arial, sans-serif' // Stil personalizat pentru titlu
+          family: 'Arial, sans-serif'
         },
         padding: {
-          bottom: 20 // Mărește distanța sub titlu
+          bottom: 30
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function (tooltipItem) {
+            const value = tooltipItem.raw;
+            return `${tooltipItem.label}: ${value} RON`;
+          }
         }
       }
     },
     animation: {
-      duration: 1000, // Adaugă o animație la încărcare
-      easing: 'easeOutBounce' // Efect de animație la încărcare
+      duration: 1000,
+      easing: 'easeOutBounce'
     },
     scales: {
       y: {
         beginAtZero: true,
         ticks: {
-          stepSize: 100, // Adaugă trepte de 100 în grafic
+          stepSize: 100,
           font: {
-            size: 14 // Modifică fontul valorilor de pe axa Y
+            size: 14
+          },
+          callback: function(value) {
+            if (value === 0 || value === 1) {
+              return '';
+            }
+            return value;
           }
-        }
+        },
+        grid: {
+          display: false,
+          borderColor: 'transparent', // Asigură-te că linia de margine a axei Y este transparentă
+          drawBorder: false // Evită desenarea marginilor pe axa Y
+        },
+        borderWidth: 0
       },
       x: {
         ticks: {
           font: {
-            size: 14, // Modifică fontul valorilor de pe axa X
+            size: 16,
             weight: 'bold'
           }
-        }
+        },
+        grid: {
+          display: false,
+          borderColor: 'transparent', // Asigură-te că linia de margine a axei X este transparentă
+          drawBorder: false // Evită desenarea marginilor pe axa X
+        },
+        borderWidth: 0
+      }
+    },
+    layout: {
+      padding: {
+        left: 10,
+        right: 10,
+        top: 10,
+        bottom: 10
       }
     }
-  };
+  };  
 
+  // Render the chart
   if (loading) {
     return (
       <div className="home-container">
@@ -204,22 +239,22 @@ const Home = () => {
 
         <div className="financial-summary">
           <div className="summary-card">
-            <h3>Venituri Lunare</h3>
+            <h3>Venituri luna {capitalizedMonthName}</h3>
             <p>{income} RON</p>
           </div>
 
           <div className="summary-card">
-            <h3>Buget Lunar</h3>
+            <h3>Bugetul lunii {capitalizedMonthName} </h3>
             <p>{monthlyBudget} RON</p>
           </div>
 
           <div className="summary-card">
-            <h3>Cheltuieli Totale</h3>
+            <h3>Cheltuieli luna {capitalizedMonthName}</h3>
             <p>{formattedTotalExpenses} RON</p>
           </div>
 
           <div className="summary-card highlight">
-            <h3>Bani Rămași</h3>
+            <h3>Bani rămași din buget</h3>
             <p className={remainingBudget >= 0 ? 'positive' : 'negative'}>
               {remainingBudget} RON
             </p>
@@ -230,7 +265,7 @@ const Home = () => {
               <ul className="expenses-ul">
                 {expenses.map((expense, index) => (
                   <li key={index} className="expense-item">
-                    <span className="expense-category">{expense.category || 'Altele'}</span>
+                    <span className="expense-category">{expense.name || 'Fara denumire'}</span>
                     <span className="expense-amount">
                       {parseFloat(expense.amount).toFixed(2)} RON
                     </span>
@@ -253,8 +288,8 @@ const Home = () => {
 
       <div className="right-container">
         <div className="chart-container">
-          <h3>Bugetul meu</h3>
-          <Bar data={chartData} options={chartOptions} />
+          <h3>Bugetul meu {capitalizedMonthName}</h3>
+          <Doughnut data={chartData} options={chartOptions} /> 
         </div>
       </div>
     </div>
