@@ -13,6 +13,8 @@ import {
 import moment from 'moment';
 import './Statistics.css';
 import { useAuth } from '../../context/AuthContext';
+import 'react-datepicker/dist/react-datepicker.css';
+import DatePicker from 'react-datepicker';
 
 ChartJS.register(ArcElement, Tooltip, Legend, LinearScale, CategoryScale, BarElement);
 
@@ -27,61 +29,92 @@ const Statistics = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
   const [availableDays, setAvailableDays] = useState([]);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   const handleClearFilters = () => {
     setYear('');
     setMonth('');
     setDay('');
+    setStartDate(null);
+    setEndDate(null);
   };
 
   useEffect(() => {
     axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
   }, []);
 
-  const fetchData = async () => {
-    if (!user) return;
-  
-    // Adjustăm tipul de statistică pentru 'budgetComparison'
-    const adjustedType = type === 'budgetComparison' ? 'budgetComparison' : (day ? 'daily' : type);
-  
-    // Parametrii pentru query-ul de API
-    const params = {
-      type: adjustedType,
-      year: year || undefined,  // Dacă nu selectezi anul, trimitem undefined
-      month: month || undefined,
-      day: day || undefined,
-      category,
-      user_id: user.id,
-    };
-  
-    console.log('Request params:', params);
-  
-    try {
-      const response = await axios.get('/api/statistics', { params });
-      console.log(response.data);
-      setStatisticsData(response.data);
-  
-      if (response.data.labels && response.data.labels.length > 0) {
-        // Generăm lista de ani disponibili
-        const uniqueYears = [...new Set(response.data.labels.map(label => label?.split('-')[0]))];
+  useEffect(() => {
+    const fetchAllLabels = async () => {
+      if (!user) return;
+
+      try {
+        const response = await axios.get('/api/statistics', {
+          params: {
+            type: 'general',
+            user_id: user.id,
+          },
+        });
+
+        const allLabels = response.data.labels || [];
+
+        const uniqueYears = [...new Set(allLabels.map(label => label?.split('-')[0]))];
+        const uniqueMonths = [...new Set(allLabels.map(label => label?.split('-')[1]))];
+
         setAvailableYears(uniqueYears);
-  
-        // Generăm lista de luni disponibile
-        const uniqueMonths = [...new Set(
-          response.data.labels
-            .filter(label => label && label.startsWith(year))
-            .map(label => label?.split('-')[1])
-        )];
         setAvailableMonths(uniqueMonths);
+      } catch (err) {
+        console.error('Eroare la încărcarea label-urilor generale:', err);
       }
-    } catch (error) {
-      console.error('Eroare la obținerea datelor:', error);
-    }
-  };
+    };
+
+    fetchAllLabels();
+  }, [user]);
 
   useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      if (type === 'expensesByPeriod' && (!startDate || !endDate)) {
+        return;
+      }
+
+      const adjustedType =
+        type === 'budgetComparison' || type === 'unplannedExpenses'
+          ? type
+          : day
+            ? 'daily'
+            : type;
+
+
+
+      const params = {
+        type: adjustedType,
+        category,
+        user_id: user.id,
+      };
+
+      if (type === 'expensesByPeriod') {
+        params.start_date = moment(startDate).format('YYYY-MM-DD');
+        params.end_date = moment(endDate).format('YYYY-MM-DD');
+      } else {
+        params.year = year || undefined;
+        params.month = month || undefined;
+        params.day = day || undefined;
+      }
+
+      try {
+        const response = await axios.get('/api/statistics', { params });
+        setStatisticsData(response.data);
+      } catch (error) {
+        console.error('Eroare la obținerea datelor:', error);
+      }
+    };
+
     fetchData();
-  }, [type, year, month, day, category, user]);
+  }, [type, year, month, day, category, user, startDate, endDate]);
+
+
 
   useEffect(() => {
     if (month && year) {
@@ -102,29 +135,25 @@ const Statistics = () => {
   }, [day, type]);
 
   useEffect(() => {
-    if (!statisticsData?.labels?.length) return;
-  
-    const filtered = statisticsData.labels
-      .map(label => label?.split('-')[0])
-      .filter(year => year && !isNaN(year) && year.length === 4);
-  
-    const uniqueYears = [...new Set(filtered)];
-    setAvailableYears(uniqueYears);
-  
-    const monthsFiltered = statisticsData.labels
-      .filter(label => year && label.startsWith(year))
-      .map(label => label?.split('-')[1])
-      .filter(m => m && m.length === 2);
-  
-    const uniqueMonths = [...new Set(monthsFiltered)];
-    setAvailableMonths(uniqueMonths);
-  }, [statisticsData, year]);
-  
+    if (type !== 'daily' && type !== 'budgetComparison') {
+      setMonth('');
+      setDay('');
+    }
+  }, [type]);
+
+  useEffect(() => {
+    if (type !== 'expensesByPeriod') {
+      setStartDate(null);
+      setEndDate(null);
+    }
+  }, [type]);
+
 
   const generateChartData = () => {
     if (!statisticsData) return {};
 
     const filterByDate = (label) => {
+      if (type === 'unplannedExpenses') return true; // 🟢 Nu filtrăm aici
       const [y, m] = label?.split('-') || [];
       if (year && y !== year) return false;
       if (month && m !== month) return false;
@@ -179,33 +208,21 @@ const Statistics = () => {
             },
           ],
         };
-      case 'category':
-        return {
-          labels: ['Necesar', 'Opțional'],
-          datasets: [
-            {
-              data: [
-                statisticsData.necessaryExpenses ?? 0,
-                statisticsData.optionalExpenses ?? 0,
-              ],
-              backgroundColor: ['#ff6384', '#36a2eb'],
-            },
-          ],
-        };
+
       case 'expensesByPeriod':
         return {
-          labels: ['Zi', 'Săptămână', 'Lună'],
+          labels: statisticsData.labels || [],
           datasets: [
             {
-              data: [
-                statisticsData.dailyExpense ?? 0,
-                statisticsData.weeklyExpense ?? 0,
-                statisticsData.monthlyExpense ?? 0,
-              ],
-              backgroundColor: ['#ff6384', '#36a2eb', '#ffce56'],
+              label: 'Cheltuieli',
+              data: statisticsData.expenses || [],
+              borderColor: '#ff6384',
+              backgroundColor: '#ff6384',
+              fill: false,
             },
           ],
         };
+
       case 'remainingBudget':
         return {
           labels: ['Buget Rămas'],
@@ -228,13 +245,16 @@ const Statistics = () => {
         };
       case 'unplannedExpenses':
         return {
-          labels: ['Cheltuieli Impulsive'],
+          labels: ['Impulsive', 'Planificate'],
           datasets: [
             {
-              data: [statisticsData.unplannedExpenses ?? 0],
-              backgroundColor: ['#ff6384'],
-            },
-          ],
+              data: [
+                statisticsData.unplannedExpenses ?? 0,
+                statisticsData.plannedExpenses ?? 0
+              ],
+              backgroundColor: ['#ff6384', '#36a2eb']
+            }
+          ]
         };
       default:
         return {};
@@ -243,14 +263,155 @@ const Statistics = () => {
 
   const generateTableData = () => {
     if (!statisticsData?.details) return null;
-  
+
+    if (type === 'unplannedExpenses') {
+      const rows = statisticsData.details;
+
+      if (!rows || rows.length === 0) {
+        return (
+          <div className="statistics-table">
+            <p style={{ marginTop: '1rem', color: '#666' }}>
+              Nu există cheltuieli impulsive în perioada selectată.
+            </p>
+          </div>
+        );
+      }
+
+      const sorted = [...rows].sort((a, b) => (a.period || '').localeCompare(b.period || ''));
+
+      return (
+        <div className="statistics-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Perioadă</th>
+                <th>Cheltuieli impulsive (RON)</th>
+                <th>Cheltuieli planificate (RON)</th>
+                <th>Buget (RON)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{row.period}</td>
+                  <td>{parseFloat(row.impulsive_expenses ?? 0).toFixed(2)}</td>
+                  <td>{parseFloat(row.planned_expenses ?? 0).toFixed(2)}</td>
+                  <td>{parseFloat(row.incomes_sum ?? 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'budgetComparison') {
+      const rows = [...(statisticsData.details || [])].sort((a, b) =>
+        a.period.localeCompare(b.period)
+      );
+
+      if (rows.length === 0) {
+        return (
+          <div className="statistics-table">
+            <p style={{ marginTop: '1rem', color: '#666' }}>
+              Nu există date pentru perioada selectată.
+            </p>
+          </div>
+        );
+      }
+
+      const formatLuna = (period) => {
+        const [year, month] = period.split('-');
+        return `${moment().month(month - 1).format('MMMM')} ${year}`;
+      };
+
+      return (
+        <div className="statistics-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Lună</th>
+                <th>
+                  {day
+                    ? `Cheltuieli până la ${day} ${moment().month(month - 1).format('MMMM')} ${year}`
+                    : 'Cheltuieli totale (RON)'
+                  }
+                </th>
+                <th>Buget lunar (RON)</th>
+              </tr>
+            </thead>
+            {type === 'budgetComparison' && (
+              <caption style={{ captionSide: 'bottom', paddingTop: '0.5rem', fontSize: '0.95rem', color: '#555', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+                <span style={{ fontSize: '1.1rem' }}>ℹ️</span>
+                {day
+                  ? `Suma cheltuielilor până la data de ${day} ${moment().month(month - 1).format('MMMM')} ${year}`
+                  : `Suma cheltuielilor lunare totale comparată cu bugetul lunar.`}
+              </caption>
+            )}
+
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{formatLuna(row.period)}</td>
+                  <td>{parseFloat(row.expenses_sum || 0).toFixed(2)}</td>
+                  <td>{parseFloat(row.budget_sum || 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'expensesByPeriod') {
+      const rows = statisticsData.details;
+
+      if (!rows || rows.length === 0) {
+        return (
+          <div className="statistics-table">
+            <p style={{ marginTop: '1rem', color: '#666' }}>
+              Nu există cheltuieli în perioada selectată.
+            </p>
+          </div>
+        );
+      }
+
+      const sorted = [...rows].sort((a, b) => (a.period || '').localeCompare(b.period || ''));
+
+      return (
+        <div className="statistics-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Perioadă</th>
+                <th>Nume</th>
+                <th>Categorie</th>
+                <th>Valoare (RON)</th>
+                <th>Impulsivă?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{row.period}</td>
+                  <td>{row.name}</td>
+                  <td>{row.category_name}</td>
+                  <td>{parseFloat(row.expenses_sum).toFixed(2)}</td>
+                  <td style={{ textAlign: 'center' }}>{row.planned_impulsive ? '✅' : '❌'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     const rows = statisticsData.details;
-  
-    // Pentru budgetComparison, sortăm după perioadă
+
     const sorted = [...rows].sort((a, b) => {
       return (a.period || '').localeCompare(b.period || '');
     });
-  
+
     const filteredRows = sorted.filter((row) => {
       const [y, m, d] = (row.period || '').split('-');
       if (year && y !== year) return false;
@@ -258,7 +419,7 @@ const Statistics = () => {
       if (day && d !== day) return false;
       return true;
     });
-  
+
     if (filteredRows.length === 0) {
       return (
         <div className="statistics-table">
@@ -268,7 +429,7 @@ const Statistics = () => {
         </div>
       );
     }
-  
+
     return (
       <div className="statistics-table">
         <table>
@@ -305,11 +466,10 @@ const Statistics = () => {
           <select onChange={(e) => setType(e.target.value)} value={type}>
             <option value="general">Statistică Generală</option>
             <option value="trend">Trenduri pe termen lung</option>
-            <option value="category">Necesar vs Opțional</option>
             <option value="expensesByPeriod">Cheltuieli/Perioadă</option>
             <option value="remainingBudget">Buget Rămas</option>
             <option value="budgetComparison">Buget vs Cheltuieli</option>
-            <option value="unplannedExpenses">Cheltuieli Impulsive</option>
+            <option value="unplannedExpenses">Cheltuieli Impulsive vs Planificate</option>
           </select>
         </div>
 
@@ -318,41 +478,63 @@ const Statistics = () => {
         </button>
       </div>
 
-      <div className="filters">
-        <div className="dropdown">
-          <label>An:</label>
-          <select onChange={(e) => setYear(e.target.value)} value={year}>
-            <option value="">Alege anul</option>
-            {availableYears.map((yearOption) => (
-              <option key={yearOption} value={yearOption}>{yearOption}</option>
-            ))}
-          </select>
+      {type === 'expensesByPeriod' && (
+        <div className="filters" style={{ marginTop: '1rem' }}>
+          <div className="datepicker-wrapper">
+            <label>Selectează o perioadă:</label>
+            <DatePicker
+              selectsRange
+              startDate={startDate}
+              endDate={endDate}
+              onChange={([start, end]) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              isClearable
+              dateFormat="dd MMMM yyyy"
+              placeholderText="Selectează intervalul"
+            />
+          </div>
         </div>
+      )}
 
-        <div className="dropdown">
-          <label>Lună:</label>
-          <select onChange={(e) => setMonth(e.target.value)} value={month} disabled={!year}>
-            <option value="">Alege luna</option>
-            {availableMonths.map((monthOption) => (
-              <option key={monthOption} value={monthOption}>
-                {moment().month(monthOption - 1).format('MMMM')}
-              </option>
-            ))}
-          </select>
+      {type !== 'expensesByPeriod' && (
+        <div className="filters">
+          <div className="dropdown">
+            <label>An:</label>
+            <select onChange={(e) => setYear(e.target.value)} value={year}>
+              <option value="">Alege anul</option>
+              {availableYears.map((yearOption) => (
+                <option key={yearOption} value={yearOption}>{yearOption}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="dropdown">
+            <label>Lună:</label>
+            <select onChange={(e) => setMonth(e.target.value)} value={month} disabled={!year}>
+              <option value="">Alege luna</option>
+              {availableMonths.map((monthOption) => (
+                <option key={monthOption} value={monthOption}>
+                  {moment().month(monthOption - 1).format('MMMM')}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="dropdown">
+            <label>Zi:</label>
+            <select onChange={(e) => setDay(e.target.value)} value={day} disabled={!month}>
+              <option value="">Alege ziua</option>
+              {availableDays.map((d) => (
+                <option key={d} value={`${d < 10 ? '0' : ''}${d}`}>{d}</option>
+              ))}
+            </select>
+          </div>
         </div>
+      )}
 
-        <div className="dropdown">
-          <label>Zi:</label>
-          <select onChange={(e) => setDay(e.target.value)} value={day} disabled={!month}>
-            <option value="">Alege ziua</option>
-            {availableDays.map((d) => (
-              <option key={d} value={`${d < 10 ? '0' : ''}${d}`}>{d}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {statisticsData && (
+      {(type !== 'expensesByPeriod' || (startDate && endDate)) && statisticsData && (
         <>
           <div className="chart-container">
             {type === 'trend' ? (

@@ -185,3 +185,18 @@
 .expense-list button:hover {
   background-color: #0056b3;
 }
+
+.delete-button {
+  margin-left: 8px;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.delete-button:hover {
+  background-color: #d93636;
+}

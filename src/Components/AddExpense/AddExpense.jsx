@@ -20,6 +20,8 @@ const AddExpense = () => {
   const [editingExpense, setEditingExpense] = useState(null);
   const [availableYears, setAvailableYears] = useState([]);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [plannedImpulsive, setPlannedImpulsive] = useState(false);
+
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
 
@@ -84,6 +86,7 @@ const AddExpense = () => {
       date: expenseDate,
       category_id: categoryId,
       user_id: user.id,
+      planned_impulsive: plannedImpulsive
     };
 
     try {
@@ -129,13 +132,13 @@ const AddExpense = () => {
     const expenseDate = new Date(expense.date);  // Creează un obiect Date din data completă
     const year = expenseDate.getFullYear();  // Extrage anul
     const month = (expenseDate.getMonth() + 1).toString().padStart(2, '0');  // Extrage luna și o formatează corect
-  
+
     console.log(`Expense date: ${expense.date}, Year: ${year}, Month: ${month}`);
     console.log(`Selected Month: ${selectedMonth}, Selected Year: ${selectedYear}`);
-  
+
     const matchesMonth = selectedMonth ? month === selectedMonth.toString().padStart(2, '0') : true;
     const matchesYear = selectedYear ? year === selectedYear : true;
-  
+
     return matchesMonth && matchesYear;
   });
 
@@ -146,6 +149,7 @@ const AddExpense = () => {
     setExpenseAmount(expense.amount);
     setExpenseDate(expense.date);
     setCategoryId(expense.category_id);
+    setPlannedImpulsive(expense.planned_impulsive);
   };
 
   // Handle cancel edit
@@ -155,6 +159,19 @@ const AddExpense = () => {
     setExpenseAmount('');
     setExpenseDate('');
     setCategoryId('');
+    setPlannedImpulsive(false);
+  };
+
+  const handleDelete = async (expenseId) => {
+    if (window.confirm("Ești sigur că vrei să ștergi această cheltuială?")) {
+      try {
+        await axios.delete(`/api/expenses/${expenseId}`);
+        fetchExpenses(); // Reîncarcă lista
+      } catch (err) {
+        console.error("Eroare la ștergerea cheltuielii:", err);
+        setErrorMessage('A apărut o eroare la ștergere.');
+      }
+    }
   };
 
   return (
@@ -202,6 +219,16 @@ const AddExpense = () => {
               ))}
             </select>
           </div>
+          <div>
+            <label>
+              <input
+                type="checkbox"
+                checked={plannedImpulsive}
+                onChange={(e) => setPlannedImpulsive(e.target.checked)}
+              />
+              Cheltuială neplanificată / impulsivă
+            </label>
+          </div>
           <button type="submit">
             {editingExpense ? 'Salvează Modificările' : 'Adaugă Cheltuială'}
           </button>
@@ -242,6 +269,7 @@ const AddExpense = () => {
                   <th>Sumă (RON)</th>
                   <th>Dată</th>
                   <th>Categorie</th>
+                  <th>Impulsiva?</th>
                   <th>Acțiune</th>
                 </tr>
               </thead>
@@ -254,11 +282,17 @@ const AddExpense = () => {
                       <td>{expense.amount}</td>
                       <td>{new Date(expense.date).toLocaleDateString('ro-RO')}</td>
                       <td>{categoryName}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        {expense.planned_impulsive ? '✅' : '❌'}
+                      </td>
                       <td>
                         {editingExpense && editingExpense.id === expense.id ? (
                           <button onClick={handleCancelEdit}>Anulează editarea</button>
                         ) : (
+                          <>
                           <button onClick={() => handleEdit(expense)}>Editează</button>
+                          <button onClick={() => handleDelete(expense.id)} className="delete-button">Șterge</button>
+                          </>
                         )}
                       </td>
                     </tr>
