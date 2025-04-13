@@ -67,7 +67,6 @@ const AddExpense = () => {
   }, [user, selectedMonth, selectedYear]);
 
   useEffect(() => {
-    console.log("Fetched expenses:", expenses);
     fetchCategories();
     fetchExpenses();
   }, [user, fetchCategories, fetchExpenses]);

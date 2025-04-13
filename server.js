@@ -439,7 +439,7 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
-const handleGoogleLoginSuccess = async (req, res) => {
+/* const handleGoogleLoginSuccess = async (req, res) => {
   const token = req.body.token; // Token-ul Google primit din frontend
   try {
     const ticket = await google.auth.verifyIdToken({
@@ -468,8 +468,10 @@ const handleGoogleLoginSuccess = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Eroare la autentificare cu Google.' });
   }
-
 };
+
+*/
+
 // Endpoint pentru adăugarea veniturilor, economiilor și bugetului lunar
 app.post('/add-income', verifyToken, async (req, res) => {
   const { income, savings, monthlyBudget } = req.body;
@@ -969,7 +971,7 @@ app.get('/api/monthly_budget', async (req, res) => {
 });
 
 app.get('/api/statistics', async (req, res) => {
-  const { user_id, type, year, month, week, day, category } = req.query;
+  const { user_id, type, year, month, day,} = req.query;
 
   // Logăm valorile primite în request
   console.log('Received request with params:', req.query);

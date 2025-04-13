@@ -25,7 +25,7 @@ const Statistics = () => {
   const [year, setYear] = useState('');
   const [month, setMonth] = useState('');
   const [day, setDay] = useState('');
-  const [category, setCategory] = useState('all');
+  const [category,] = useState('all');
   const [availableYears, setAvailableYears] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
   const [availableDays, setAvailableDays] = useState([]);
