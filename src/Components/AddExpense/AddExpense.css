@@ -262,3 +262,84 @@
   transform: scale(1.2) rotate(90deg);
   color: #0056b3;
 }
+
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  z-index: 10;
+  max-height: 250px;
+  overflow-y: auto;
+  min-width: 180px;
+  width: max-content; /* se adaptează după conținut */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.95rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.filter-dropdown label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.filter-dropdown label:hover {
+  background-color: #f0f4ff;
+  color: #007bff;
+}
+
+.filter-dropdown input[type="checkbox"] {
+  margin-right: 8px;
+  accent-color: #007bff; 
+}
+
+.filter-dropdown button {
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: none;
+  background-color: #f44336;
+  color: white;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.filter-dropdown button:hover {
+  background-color: #d32f2f;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reset-filters-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.reset-filters-btn {
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.reset-filters-btn:hover {
+  background-color: #d4d4d4;
+  color: #000;
+}

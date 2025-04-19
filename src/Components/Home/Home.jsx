@@ -91,14 +91,18 @@ const Home = () => {
   const formattedTotalExpenses = totalExpenses && !isNaN(totalExpenses) ? totalExpenses.toFixed(2) : '0.00';
 
   // Calculate remaining budget
-  const remainingBudget = monthlyBudget - totalExpenses;
+  const remainingBudgetValue = monthlyBudget - totalExpenses;
+  const remainingBudgetFormatted = remainingBudgetValue.toLocaleString('ro-RO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   // Prepare chart data
   const chartData = {
     labels: ['Cheltuieli', 'Ramas din buget'],
     datasets: [
       {
-        data: [totalExpenses, remainingBudget],
+        data: [totalExpenses, remainingBudgetValue ],
         backgroundColor: [
           'rgba(255, 99, 132, 0.8)',
           'rgba(75, 192, 192, 0.8)'
@@ -255,8 +259,8 @@ const Home = () => {
 
           <div className="home-summary-card highlight">
             <h3>Bani rămași din buget</h3>
-            <p className={remainingBudget >= 0 ? 'positive' : 'negative'}>
-              {remainingBudget} RON
+            <p className={remainingBudgetValue >= 0 ? 'positive' : 'negative'}>
+              {remainingBudgetFormatted} RON
             </p>
           </div>
           <div className="home-progress-container" title={`Ai cheltuit ${totalExpenses} RON din ${monthlyBudget} RON`}>
@@ -305,7 +309,7 @@ const Home = () => {
         <div className="home-chart-container">
           <h3>Bugetul meu {capitalizedMonthName}</h3>
           <div className="home-chart-wrapper">
-          <Doughnut data={chartData} options={chartOptions} />
+            <Doughnut data={chartData} options={chartOptions} />
           </div>
         </div>
       </div>
