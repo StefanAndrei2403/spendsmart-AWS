@@ -34,7 +34,7 @@ function App() {
     <GoogleOAuthProvider clientId="166245198945-gh14hvgqlcrr58re9rjdqu985srlnnvo.apps.googleusercontent.com">
       <BrowserRouter>
         <AuthProvider>
-          <AppContent /> {/* Muta logica autentificării aici */}
+          <AppContent /> 
         </AuthProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>

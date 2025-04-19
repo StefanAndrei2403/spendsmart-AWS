@@ -73,7 +73,7 @@ app.post('/login', async (req, res) => {
     // Generează token JWT
     const token = jwt.sign(
       {
-        id: user.id,
+        userId: user.id,
         username: user.username,
         email: user.email
       },
@@ -165,66 +165,60 @@ app.post('/google-login', async (req, res) => {
   }
 
   try {
-    // Verifică token-ul Google
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,  // Adaugă GOOGLE_CLIENT_ID în fișierul .env
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
     console.log('Google User:', payload);
 
-    // Aici poți să creezi un utilizator nou sau să îl loghezi pe cel existent
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [payload.email]);
     let user = result.rows[0];
+
     if (!user) {
-      // Crează un nou utilizator fără parolă
-      const insertResult = await pool.query('INSERT INTO users (username, email) VALUES ($1, $2) RETURNING id, username, email', [payload.name, payload.email]);
+      // 🔐 Generează parolă doar dacă e utilizator NOU
+      const generateRandomPassword = () => {
+        return crypto.randomBytes(8).toString('hex');
+      };
+
+      const randomPassword = generateRandomPassword();
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      const insertResult = await pool.query(
+        'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
+        [payload.name, payload.email, hashedPassword]
+      );
+
       user = insertResult.rows[0];
+
+      // 📧 Trimite email DOAR pentru utilizatorii noi
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: payload.email,
+        subject: 'Bine ai venit! Parola ta temporară',
+        text: `Parola ta temporară este: ${randomPassword}. Te rugăm să o schimbi din setările contului.`
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Eroare la trimiterea emailului:', error);
+        } else {
+          console.log("📧 Email trimis la:", payload.email, "| Parolă:", randomPassword);
+        }
+      });
     }
 
-    // Generare parolă temporară
-    const generateRandomPassword = () => {
-      return crypto.randomBytes(8).toString('hex'); // Generează o parolă de 16 caractere
-    };
-
-    const randomPassword = generateRandomPassword();
-    const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-    // Actualizează parola utilizatorului cu parola temporară
-    await pool.query(
-      'UPDATE users SET password = $1 WHERE id = $2',
-      [hashedPassword, user.id]
-    );
-
-    // Generare token JWT
+    // 🎟 Generează token JWT
     const tokenJWT = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    // Setează token-ul JWT în cookie
     res.cookie('auth_token', tokenJWT, {
       httpOnly: true,
-      sameSite: 'None',  // Pentru a permite cookie-urile cross-site (dacă aplicația ta are frontend pe un domeniu diferit)
-      secure: false,      // Asigură-te că folosești HTTPS
-      maxAge: 3600000,   // Valabilitatea cookie-ului (1 oră)
+      sameSite: 'None',
+      secure: false,
+      maxAge: 3600000,
     });
 
-    // Trimite token-ul JWT și în răspuns
     res.status(200).json({ token: tokenJWT });
-
-    // Trimite parola generată pe email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: payload.email,
-      subject: 'Bine ai venit! Parola ta temporară',
-      text: `Parola ta temporară este: ${randomPassword}. Te rugăm să o schimbi din setările contului.`
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Eroare la trimiterea emailului:', error);
-        return res.status(500).json({ message: 'Eroare la trimiterea emailului' });
-      }
-      console.log("Trimit email la:", payload.email, "cu parola:", randomPassword);
-    });
 
   } catch (error) {
     console.error('Google Login Error:', error);
@@ -253,20 +247,32 @@ const verifyToken = (req, res, next) => {
 };
 
 // Endpoint protejat - exemplu
-app.get('/profile', auth, async (req, res) => {
+app.get('/profile', async (req, res) => {
   try {
-    const userId = req.userId;  // `auth` middleware-ul adaugă `userId` în req
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Token lipsă' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const userId = decoded.userId;
+    console.log("✅ Token valid pentru user ID:", userId);
 
     if (!userId) {
       return res.status(400).json({ message: 'ID-ul utilizatorului nu este valid' });
     }
 
-    // Interoghează baza de date pentru a obține informațiile utilizatorului
-    const result = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [userId]);
+    const result = await pool.query(
+      'SELECT id, username, email FROM users WHERE id = $1',
+      [userId]
+    );
+
     const user = result.rows[0];
 
     if (user) {
-      // Dacă utilizatorul există în baza de date, returnează informațiile
       res.status(200).json({
         message: 'Acces permis',
         user: {
@@ -276,9 +282,9 @@ app.get('/profile', auth, async (req, res) => {
         }
       });
     } else {
-      // Dacă utilizatorul nu a fost găsit
       res.status(404).json({ message: 'Utilizatorul nu a fost găsit' });
     }
+
   } catch (error) {
     console.error('Eroare la obținerea profilului:', error);
     res.status(500).json({ message: 'Eroare server' });
@@ -439,6 +445,37 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
+app.post('/api/change-password', verifyToken, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const userId = req.user.userId;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ message: 'Toate câmpurile sunt necesare.' });
+  }
+
+  try {
+    const result = await pool.query('SELECT password FROM users WHERE id = $1', [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Utilizatorul nu a fost găsit.' });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, result.rows[0].password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Parola veche este incorectă.' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedNewPassword, userId]);
+
+    res.status(200).json({ message: 'Parola a fost schimbată cu succes.' });
+  } catch (error) {
+    console.error('Eroare la schimbarea parolei:', error);
+    res.status(500).json({ message: 'Eroare la server.' });
+  }
+});
+
+
 /* const handleGoogleLoginSuccess = async (req, res) => {
   const token = req.body.token; // Token-ul Google primit din frontend
   try {
@@ -473,9 +510,43 @@ app.post('/reset-password', async (req, res) => {
 */
 
 // Endpoint pentru adăugarea veniturilor, economiilor și bugetului lunar
+
+app.put('/api/update-user', verifyToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { username, email } = req.body;
+
+  if (!username || !email) {
+    return res.status(400).json({ message: 'Username și email sunt necesare' });
+  }
+
+  try {
+    // Verifică dacă email-ul sau username-ul e deja folosit de altcineva
+    const existing = await pool.query(
+      'SELECT * FROM users WHERE (email = $1 OR username = $2) AND id != $3',
+      [email, username, userId]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: 'Email-ul sau username-ul sunt deja folosite' });
+    }
+
+    // Update user data
+    await pool.query(
+      'UPDATE users SET username = $1, email = $2 WHERE id = $3',
+      [username, email, userId]
+    );
+
+    res.status(200).json({ message: 'Datele au fost actualizate cu succes' });
+  } catch (error) {
+    console.error('Eroare la actualizarea datelor utilizatorului:', error);
+    res.status(500).json({ message: 'Eroare la server' });
+  }
+});
+
+
 app.post('/add-income', verifyToken, async (req, res) => {
   const { income, savings, monthlyBudget } = req.body;
-  const userId = req.user.id;
+  const userId = req.user.userId;
 
   if (!income || !savings || !monthlyBudget) {
     return res.status(400).json({ message: 'Toate câmpurile sunt necesare' });
@@ -495,7 +566,7 @@ app.post('/add-income', verifyToken, async (req, res) => {
 });
 // Endpoint pentru obținerea veniturilor, economiilor și bugetului lunar
 app.get('/get-financials', verifyToken, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user.userId;
 
   try {
     // Căutăm datele financiare în baza de date
@@ -610,7 +681,7 @@ app.use('/protected', auth, (req, res) => {
 // Endpoint pentru adăugarea unei categorii
 app.post('/categories', verifyToken, async (req, res) => {
   const { name, description } = req.body;
-  const userId = req.user.id;
+  const userId = req.user.userId;
 
   if (!name || !description) {
     return res.status(400).json({ message: 'Numele și descrierea sunt necesare' });
@@ -635,7 +706,7 @@ app.post('/categories', verifyToken, async (req, res) => {
 
 // Endpoint pentru obținerea categoriilor unui utilizator
 app.get('/categories', verifyToken, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user.userId;
 
   try {
     // Obține categoriile din baza de date
@@ -658,7 +729,7 @@ app.get('/categories', verifyToken, async (req, res) => {
 // Endpoint pentru ștergerea unei categorii
 app.delete('/categories/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
-  const userId = req.user.id;
+  const userId = req.user.userId;
 
   try {
     // Verifică dacă categoria există
@@ -682,12 +753,18 @@ app.delete('/categories/:id', verifyToken, async (req, res) => {
 });
 
 app.get('/api/categories', verifyToken, async (req, res) => {
+  const userId = req.user.userId;
+
   try {
-    const result = await pool.query('SELECT * FROM expenses_categories');
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({ message: 'Eroare la preluarea categoriilor' });
+    const result = await pool.query(
+      'SELECT id, name, description FROM expenses_categories WHERE user_id = $1',
+      [userId]
+    );
+
+    res.status(200).json({ categories: result.rows });
+  } catch (err) {
+    console.error('Eroare la obținerea categoriilor:', err);
+    res.status(500).json({ message: 'Eroare la server' });
   }
 });
 
@@ -727,7 +804,7 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
 
 app.get('/api/get-financial-data', verifyToken, async (req, res) => {
   try {
-    const user_id = req.user.id;
+    const user_id = req.user.userId;
     const now = new Date();
     const currentMonth = now.getMonth() + 1; // 1-12
     const currentYear = now.getFullYear();   // YYYY
@@ -830,7 +907,7 @@ app.get('/api/expenses', verifyToken, async (req, res) => {
 app.put('/api/expenses/:id', verifyToken, async (req, res) => {
   try {
     const expenseId = req.params.id;
-    const user_id = req.user.id;
+    const user_id = req.user.userId;
 
     const { name, amount, date, category_id, planned_impulsive } = req.body;
 
@@ -857,7 +934,7 @@ app.put('/api/expenses/:id', verifyToken, async (req, res) => {
 app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
   try {
     const expenseId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const deleteQuery = `DELETE FROM expenses WHERE id = $1 AND user_id = $2`;
     await pool.query(deleteQuery, [expenseId, userId]);
@@ -971,7 +1048,7 @@ app.get('/api/monthly_budget', async (req, res) => {
 });
 
 app.get('/api/statistics', async (req, res) => {
-  const { user_id, type, year, month, day,} = req.query;
+  const { user_id, type, year, month, day, start_date, end_date } = req.query;
 
   // Logăm valorile primite în request
   console.log('Received request with params:', req.query);
@@ -1148,7 +1225,6 @@ app.get('/api/statistics', async (req, res) => {
 
 
     case 'expensesByPeriod':
-      const { start_date, end_date } = req.query;
 
       if (!start_date || !end_date) {
         return res.status(400).json({ error: 'Trebuie să selectezi un interval de date.' });
@@ -1247,6 +1323,138 @@ app.get('/api/statistics', async (req, res) => {
       }
       break;
 
+
+    case 'expensesByCategory':
+
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: 'Trebuie să selectezi un interval de date.' });
+      }
+
+      query = `
+          SELECT 
+            ec.name AS category_name,
+            ec.description,
+            SUM(e.amount) AS total_amount
+          FROM expenses e
+          JOIN expenses_categories ec ON ec.id = e.category_id
+          WHERE e.user_id = $1
+            AND e.date BETWEEN $2 AND $3
+          GROUP BY ec.name, ec.description
+          ORDER BY total_amount DESC;
+        `;
+
+      queryParams = [user_id, start_date, end_date]; 
+      break;
+
+    case 'prediction':
+      console.log('[prediction] running...');
+
+      try {
+        const expensesQuery = await pool.query(
+          `SELECT TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS period,
+                    EXTRACT(MONTH FROM date) AS month_num,
+                    SUM(amount) AS total
+             FROM expenses
+             WHERE user_id = $1
+             GROUP BY period, month_num
+             ORDER BY period`,
+          [user_id]
+        );
+
+        const incomesQuery = await pool.query(
+          `SELECT TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS period,
+                    EXTRACT(MONTH FROM date) AS month_num,
+                    SUM(amount) AS total
+             FROM incomes
+             WHERE user_id = $1
+             GROUP BY period, month_num
+             ORDER BY period`,
+          [user_id]
+        );
+
+        const expenseRows = expensesQuery.rows.filter(r => parseFloat(r.total) > 0);
+        const incomeRows = incomesQuery.rows.filter(r => parseFloat(r.total) > 0);
+
+        const allPeriods = [...new Set([...expenseRows, ...incomeRows].map(r => r.period))].sort();
+        const monthToIndex = allPeriods.reduce((acc, p, i) => { acc[p] = i + 1; return acc; }, {});
+
+        const data = allPeriods.map(period => {
+          const monthNum = parseInt(period.split('-')[1], 10);
+          const expenses = parseFloat(expenseRows.find(r => r.period === period)?.total || 0);
+          const incomes = parseFloat(incomeRows.find(r => r.period === period)?.total || 0);
+          return { period, month_num: monthNum, expenses, incomes, index: monthToIndex[period] };
+        });
+
+        console.log('[prediction] Data:', data);
+
+        // Sezonalitate
+        const avgByMonth = {};
+        data.forEach(r => {
+          if (!avgByMonth[r.month_num]) avgByMonth[r.month_num] = { expenses: [], incomes: [] };
+          avgByMonth[r.month_num].expenses.push(r.expenses);
+          avgByMonth[r.month_num].incomes.push(r.incomes);
+        });
+
+        const seasonal = {};
+        for (const m in avgByMonth) {
+          seasonal[m] = {
+            expenses: avgByMonth[m].expenses.reduce((a, b) => a + b, 0) / avgByMonth[m].expenses.length,
+            incomes: avgByMonth[m].incomes.reduce((a, b) => a + b, 0) / avgByMonth[m].incomes.length,
+          };
+        }
+
+        console.log('[prediction] Seasonal averages:', seasonal);
+
+        // Regresie simplă
+        const X = data.map(r => r.index);
+        const expensesY = data.map(r => r.expenses);
+        const incomesY = data.map(r => r.incomes);
+
+        const regress = (X, Y) => {
+          const n = X.length;
+          const xMean = X.reduce((a, b) => a + b, 0) / n;
+          const yMean = Y.reduce((a, b) => a + b, 0) / n;
+          const num = X.reduce((sum, x, i) => sum + (x - xMean) * (Y[i] - yMean), 0);
+          const den = X.reduce((sum, x) => sum + (x - xMean) ** 2, 0);
+          const slope = den !== 0 ? num / den : 0;
+          const intercept = yMean - slope * xMean;
+          return x => slope * x + intercept;
+        };
+
+        const predictExpense = regress(X, expensesY);
+        const predictIncome = regress(X, incomesY);
+
+        const predictions = [];
+        const baseIndex = X[X.length - 1];
+
+        for (let i = 1; i <= 3; i++) {
+          const futureDate = new Date();
+          futureDate.setMonth(futureDate.getMonth() + i);
+          const period = futureDate.toISOString().slice(0, 7);
+          const monthNum = futureDate.getMonth() + 1;
+
+          const seasonalExpense = seasonal[monthNum]?.expenses;
+          const seasonalIncome = seasonal[monthNum]?.incomes;
+
+          const predExp = seasonalExpense ?? predictExpense(baseIndex + i);
+          const predInc = seasonalIncome ?? predictIncome(baseIndex + i);
+
+          predictions.push({
+            period,
+            avg_expenses: Math.round(predExp * 100) / 100,
+            avg_incomes: Math.round(predInc * 100) / 100,
+            estimated_savings: Math.round((predInc - predExp) * 100) / 100,
+          });
+        }
+
+        console.log('[prediction] Predictions:', predictions);
+        return res.json({ predictions });
+
+      } catch (err) {
+        console.error('Eroare la calcularea predicției:', err);
+        return res.status(500).json({ error: 'Eroare la generarea predicției.' });
+      }
+
     case 'daily':
       query = `
           SELECT
@@ -1282,6 +1490,12 @@ app.get('/api/statistics', async (req, res) => {
   try {
     // Executăm interogarea
     const result = await pool.query(query, queryParams);
+
+    if (type === 'prediction') {
+      return res.json({
+        predictions: result.rows
+      });
+    }
     let totalImpulsive = 0;
     let totalPlanned = 0;
 
@@ -1310,6 +1524,7 @@ app.get('/api/statistics', async (req, res) => {
     res.status(500).json({ error: 'A apărut o eroare la obținerea datelor.' });
   }
 });
+
 
 // Servește fișierele statice construite de React
 app.use(express.static(path.join(__dirname, 'build')));

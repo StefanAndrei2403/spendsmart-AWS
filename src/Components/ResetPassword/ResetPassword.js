@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './ResetPassword.css';
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [redirectTimer, setRedirectTimer] = useState(5);
+  const [showProgress, setShowProgress] = useState(false); // 👈
   const { search } = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(search);
   const token = queryParams.get('token');
 
@@ -19,12 +22,23 @@ const ResetPassword = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/reset-password', {
+      const response = await axios.post('/reset-password', {
         token,
         newPassword,
       });
 
       setMessage(response.data.message);
+      setShowProgress(true); // 👈 afișează bara de progres
+
+      const interval = setInterval(() => {
+        setRedirectTimer((prev) => {
+          if (prev === 1) {
+            clearInterval(interval);
+            navigate('/');
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (error) {
       setMessage('A apărut o eroare la resetarea parolei. Te rugăm să încerci din nou.');
     }
@@ -48,7 +62,23 @@ const ResetPassword = () => {
           </div>
           <button type="submit" className="reset-password-btn">Resetare parolă</button>
         </form>
-        {message && <p className="reset-password-message">{message}</p>}
+
+        {message && (
+          <div className="reset-password-message">
+            <p>{message}</p>
+            {showProgress && (
+              <>
+                <p>Vei fi redirecționat în {redirectTimer} secunde...</p>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar"
+                    style={{ width: `${(redirectTimer / 5) * 100}%` }}
+                  ></div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

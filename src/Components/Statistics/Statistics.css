@@ -1,183 +1,194 @@
 /* Stiluri generale pentru pagina de statistici */
 .statistics-container {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px;
-  }
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+}
 
-  .statistics-container canvas {
-    width: 100% !important; /* Face canvas-ul responsive */
-    height: 100% !important; /* Împiedică canvas-ul să devină prea mare */
-    object-fit: contain; /* Asigură o scalare proporționată */
-    transition: all 0.3s ease;
-  }
-  
-  /* Titlul paginii */
-  .statistics-container h1 {
-    font-size: 2.5rem;
-    color: #222;
-    margin-bottom: 40px;
-    font-weight: 600;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
+.statistics-container canvas {
+  height: auto !important;
+  width: auto !important;
+  max-width: 100% !important;
+  max-height: 400px !important;
+  object-fit: contain;
+  transition: all 0.3s ease;
+}
 
-  .dropdown {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 10px;
-    min-width: 150px;
-    flex: 1;
-    max-width: 250px;
-  }
-  
-  /* Etichete pentru dropdown */
-  .dropdown label {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #444;
-    margin-bottom: 10px;
-  }
-  
-  /* Selecturile pentru dropdown */
-  .dropdown select {
-    padding: 12px;
-    font-size: 1rem;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    background-color: #fff;
-    color: #333;
-    transition: all 0.3s ease;
-    width: 100%;
-  }
-  
-  .dropdown select:focus {
-    border-color: #0056b3;
-    outline: none;
-  }
-  
-  /* Butonul pentru calendar */
-  .dropdown button {
-    padding: 12px;
-    font-size: 1rem;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    background-color: #fff;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    text-align: left;
-  }
-  
-  .dropdown button:hover {
-    background-color: #f0f0f0;
-  }
-  
-  .dropdown button:focus {
-    border-color: #0056b3;
-    outline: none;
-  }
-  
-  /* Containerul pentru grafice */
-  .chart-container {
-    width: 100%;
-    max-width: 1000px;
-    margin-top: 40px;
-    display: flex;
-    justify-content: center;
-  }
-  
-  /* Tabelul cu statistici detaliate */
-  table {
-    width: 100%;
-    margin-top: 40px;
-    border-collapse: collapse;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  }
-  
-  th, td {
-    padding: 15px;
-    text-align: center;
-    font-size: 1rem;
-  }
-  
-  th {
-    background-color: #007bff;
-    color: #fff;
-    font-weight: 600;
-  }
-  
-  tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
-  
-  tr:hover {
-    background-color: #f1f1f1;
-    cursor: pointer;
-  }
-  
-  td {
-    color: #555;
-    font-weight: 400;
-  }
-  
-  /* Stil pentru DatePicker */
-  .react-datepicker__input-container input {
-    padding: 12px;
-    font-size: 1rem;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    width: 100%;
-    background-color: #fff;
-    color: #333;
-  }
-  
-  .react-datepicker__input-container input:focus {
-    border-color: #0056b3;
-    outline: none;
-  }
-  
-  .react-datepicker__triangle {
-    border-top-color: #007bff !important;
-  }
-  
-  /* Animarea butonului calendarului */
-  .react-datepicker-wrapper {
-    position: relative;
-  }
-  
-  .react-datepicker__month {
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Stil pentru selecția de lună și an */
-  .react-datepicker__header {
-    background-color: #007bff;
-    color: white;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-  }
-  
-  /* Adăugarea unui efect de hover pe grafice */
-  .chart-container canvas:hover {
-    transform: scale(1.05);
-    transition: transform 0.3s ease;
-  }
-  
-  .with-clear-button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+/* Titlul paginii */
+.statistics-container h1 {
+  font-size: 2.5rem;
+  color: #222;
+  margin-bottom: 40px;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.dropdown {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  min-width: 150px;
+  flex: 1;
+  max-width: 250px;
+}
+
+/* Etichete pentru dropdown */
+.dropdown label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #444;
+  margin-bottom: 10px;
+}
+
+/* Selecturile pentru dropdown */
+.dropdown select {
+  padding: 12px;
+  font-size: 1rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #333;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.dropdown select:focus {
+  border-color: #0056b3;
+  outline: none;
+}
+
+/* Butonul pentru calendar */
+.dropdown button {
+  padding: 12px;
+  font-size: 1rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown button:hover {
+  background-color: #f0f0f0;
+}
+
+.dropdown button:focus {
+  border-color: #0056b3;
+  outline: none;
+}
+
+/* Containerul pentru grafice */
+.chart-container {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  margin: 40px auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: rgba(255, 255, 255, 0.2);
+  /* opțional */
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabelul cu statistici detaliate */
+table {
+  width: 100%;
+  margin-top: 40px;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+th,
+td {
+  padding: 15px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+th {
+  background-color: #007bff;
+  color: #fff;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tr:hover {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+td {
+  color: #0f0f0f;
+  font-weight: 400;
+}
+
+/* Stil pentru DatePicker */
+.react-datepicker__input-container input {
+  padding: 12px;
+  font-size: 1rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  width: 100%;
+  background-color: #fff;
+  color: #333;
+}
+
+.react-datepicker__input-container input:focus {
+  border-color: #0056b3;
+  outline: none;
+}
+
+.react-datepicker__triangle {
+  border-top-color: #007bff !important;
+}
+
+/* Animarea butonului calendarului */
+.react-datepicker-wrapper {
+  position: relative;
+}
+
+.react-datepicker__month {
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Stil pentru selecția de lună și an */
+.react-datepicker__header {
+  background-color: #007bff;
+  color: white;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+/* Adăugarea unui efect de hover pe grafice */
+.chart-container canvas:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+.with-clear-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .filters {
   display: flex;
@@ -190,32 +201,93 @@
   width: 100%;
 }
 
-  .filters-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .filters-row .dropdown {
-    flex-grow: 1;
-  }
-  
-  .clear-btn {
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    height: 40px;
-    display: flex;
-    align-items: center;
-  }
-  
-  .clear-btn:hover {
-    background-color: #c0392b;
-  }
-  
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filters-row .dropdown {
+  flex-grow: 1;
+}
+
+.clear-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.clear-btn:hover {
+  background-color: #c0392b;
+}
+
+.prediction-header {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.prediction-header span.emoji {
+  font-size: 1.8rem;
+}
+
+.prediction-table {
+  width: 100%;
+  max-width: 1000px;
+  margin: 2rem auto 0;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.prediction-table th,
+.prediction-table td {
+  padding: 14px 16px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.prediction-table th {
+  background-color: #007bff;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prediction-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.prediction-table tr:hover {
+  background-color: #f1f1f1;
+  transition: 0.2s ease;
+}
+
+.prediction-table td {
+  color: #555;
+}
+
+.prediction-chart {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  justify-content: center;
+}

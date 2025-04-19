@@ -7,6 +7,8 @@ import { RiLockPasswordLine } from "react-icons/ri";
 import { AuthContext } from '../../context/AuthContext';
 import Register from '../Register/Register';
 import './LoginForm.css';
+import ForgotPasswordPopup from './ForgotPasswordPopup';
+
 
 const LoginForm = () => {
   const { login } = useContext(AuthContext); // Folosim direct funcția login din context
@@ -15,14 +17,17 @@ const LoginForm = () => {
   const [email] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showRegister, setShowRegister] = useState(false);
-  const [setShowForgotPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
   const navigate = useNavigate();
 
   // Verificăm dacă există un token în localStorage și validăm dacă este valid
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
+
+    const isResetRoute = window.location.pathname === '/reset-password';
+
     if (token) {
-      // Dacă există token, validăm token-ul cu backend
       axios.get('/protected', {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -31,10 +36,14 @@ const LoginForm = () => {
         })
         .catch(error => {
           console.error('Token invalid sau expirat', error);
-          navigate('/login'); // Redirecționează utilizatorul la login dacă token-ul este invalid
+          if (!isResetRoute) {
+            navigate('/login');
+          }
         });
     } else {
-      navigate('/login'); // Dacă nu există token, redirecționează la login
+      if (!isResetRoute) {
+        navigate('/login');
+      }
     }
   }, [navigate]);
 
@@ -42,26 +51,29 @@ const LoginForm = () => {
   const handleGoogleLoginSuccess = async (response) => {
     try {
       console.log('Google login response:', response);
-  
+
       const requestData = { token: response.credential };
       console.log('Sending token to backend:', requestData);
-  
+
       // Trimite cererea către backend
       const res = await axios.post('/google-login', requestData, {
         headers: { 'Content-Type': 'application/json' },
         withCredentials: true,  // Asigură-te că trimite cookie-urile cu cererea
       });
-  
+
       console.log('Response from backend:', res.data);
-  
+
       // Verifică dacă răspunsul conține un token
       if (res.data.token) {
         // Setează token-ul în context
-        login(res.data.token);
-  
+        login({
+          token: res.data.token,
+          user: res.data.user
+        });
+
         // Salvează token-ul în localStorage pentru a fi disponibil pe termen lung
         localStorage.setItem('auth_token', res.data.token);
-  
+
         // Redirecționează utilizatorul pe pagina de home
         navigate('/home');
       } else {
@@ -72,7 +84,7 @@ const LoginForm = () => {
       setErrorMessage('Google authentication failed. Please try again.');
     }
   };
-  
+
 
   const handleGoogleLoginFailure = () => {
     setErrorMessage('Google login was cancelled or failed');
@@ -97,7 +109,7 @@ const LoginForm = () => {
         // Verifică dacă token-ul există și este valid
         if (token) {
           // Salvează token-ul în context (AuthContext)
-          login(token);
+          login({ token });
 
           // Salvează token-ul și în localStorage pentru a fi disponibil pe termen lung
           localStorage.setItem('auth_token', token);
@@ -118,6 +130,7 @@ const LoginForm = () => {
   };
 
   return (
+    <div className="login-container-center">
     <div className='wrapper'>
       {!showRegister ? (
         <form onSubmit={handleSubmit}>
@@ -132,8 +145,19 @@ const LoginForm = () => {
           </div>
           <div className="remember-forgot">
             <label><input type="checkbox" />Remember me</label>
-            <button type="button" className="link-button" onClick={() => setShowForgotPassword(true)}>Forgot password?</button>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setShowForgotPassword(true)}
+            >
+              Forgot password?
+            </button>
           </div>
+
+
+          {showForgotPassword && (
+            <ForgotPasswordPopup onClose={() => setShowForgotPassword(false)} />
+          )}
           <button type="submit">Login</button>
           {errorMessage && <p>{errorMessage}</p>}
           <div className="register-link">
@@ -141,6 +165,7 @@ const LoginForm = () => {
               <button type="button" className="link-button" onClick={() => setShowRegister(true)}>Register</button>
             </p>
           </div>
+          
         </form>
       ) : (
         <Register />
@@ -151,12 +176,15 @@ const LoginForm = () => {
             onSuccess={handleGoogleLoginSuccess}
             onError={handleGoogleLoginFailure}
             clientId="166245198945-gh14hvgqlcrr58re9rjdqu985srlnnvo.apps.googleusercontent.com"
-            uxMode="popup" 
+            uxMode="popup"
           />
 
         </div>
+        
       )}
     </div>
+    </div>
+
   );
 };
 

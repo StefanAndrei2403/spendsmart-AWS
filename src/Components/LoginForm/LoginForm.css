@@ -1,14 +1,13 @@
 html, body {
-  height: 100%; /* Asigură că avem o înălțime completă */
+  height: 100%;
   margin: 0;
   padding: 0;
-  display: flex;
-  justify-content: center;  /* Centrează pe orizontală */
-  align-items: center;  /* Centrează pe verticală */
+  font-family: 'Poppins', sans-serif;
 }
 
 .wrapper {
-  width: 420px;
+  width: 100%;
+  max-width: 420px;
   background: transparent;
   border: 2px solid rgba(5, 5, 5, 0.2);
   backdrop-filter: blur(30px);
@@ -18,7 +17,8 @@ html, body {
   padding: 30px 40px;
   position: relative;
   text-align: center;
-  margin: 0 auto; /* Asigură că wrapper-ul este centrat pe orizontală */
+  margin: 0 auto;
+  /* Asigură că wrapper-ul este centrat pe orizontală */
 }
 
 
@@ -87,7 +87,7 @@ html, body {
   border: none;
   outline: none;
   border-radius: 40px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   font-size: 16px;
   color: #020000;
@@ -116,11 +116,13 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5); /* Fundal transparent */
+  background: rgba(0, 0, 0, 0.5);
+  /* Fundal transparent */
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Asigură-te că fereastra este deasupra altor elemente */
+  z-index: 1000;
+  /* Asigură-te că fereastra este deasupra altor elemente */
 }
 
 .modal-content {
@@ -206,4 +208,25 @@ html, body {
 .register-link button:hover {
   color: #0056b3;
   text-decoration: none;
+}
+
+.google-login {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.login-container-center {
+  position: fixed;
+  /* fixat față de fereastră */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* exact pe mijloc */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
 }

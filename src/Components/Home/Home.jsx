@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Doughnut } from 'react-chartjs-2';  
+import { Doughnut } from 'react-chartjs-2';
 import './Home.css';
 import {
   Chart as ChartJS,
@@ -29,8 +29,8 @@ const Home = () => {
   const [error, setError] = useState(null);
 
   const currentDate = new Date();
-const monthName = currentDate.toLocaleString('ro-RO', { month: 'long' });
-const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  const monthName = currentDate.toLocaleString('ro-RO', { month: 'long' });
+  const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,16 +100,16 @@ const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice
       {
         data: [totalExpenses, remainingBudget],
         backgroundColor: [
-          'rgba(255, 99, 132, 0.8)', 
-          'rgba(75, 192, 192, 0.8)' 
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(75, 192, 192, 0.8)'
         ],
         borderColor: [
-          'rgba(255, 99, 132, 1)',  
-          'rgba(75, 192, 192, 1)'   
+          'rgba(255, 99, 132, 1)',
+          'rgba(75, 192, 192, 1)'
         ],
         borderWidth: 2,
         hoverBackgroundColor: [
-          'rgba(255, 99, 132, 1)', 
+          'rgba(255, 99, 132, 1)',
           'rgba(75, 192, 192, 1)'
         ],
         hoverBorderColor: [
@@ -168,7 +168,7 @@ const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice
           font: {
             size: 14
           },
-          callback: function(value) {
+          callback: function (value) {
             if (value === 0 || value === 1) {
               return '';
             }
@@ -205,12 +205,12 @@ const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice
         bottom: 10
       }
     }
-  };  
+  };
 
   // Render the chart
   if (loading) {
     return (
-      <div className="home-container">
+      <div className="home-root-container">
         <div className="loading-spinner">
           <p>Se încarcă datele...</p>
         </div>
@@ -220,7 +220,7 @@ const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice
 
   if (error) {
     return (
-      <div className="home-container">
+      <div className="home-root-container">
         <div className="error-message">
           <p>Eroare: {error}</p>
           <button onClick={() => window.location.reload()}>Reîncarcă</button>
@@ -230,46 +230,61 @@ const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice
   }
 
   return (
-    <div className="home-container">
-      <div className="left-container">
+    <div className="home-root-container">
+      <div className="home-left-container">
         <div className="welcome-section">
           <h2>Bun venit, {user?.username || 'Utilizator'}!</h2>
           <p>Email: {user?.email || 'N/A'}</p>
         </div>
 
         <div className="financial-summary">
-          <div className="summary-card">
+          <div className="home-summary-card">
             <h3>Venituri luna {capitalizedMonthName}</h3>
             <p>{income} RON</p>
           </div>
 
-          <div className="summary-card">
+          <div className="home-summary-card">
             <h3>Bugetul lunii {capitalizedMonthName} </h3>
             <p>{monthlyBudget} RON</p>
           </div>
 
-          <div className="summary-card">
+          <div className="home-summary-card">
             <h3>Cheltuieli luna {capitalizedMonthName}</h3>
             <p>{formattedTotalExpenses} RON</p>
           </div>
 
-          <div className="summary-card highlight">
+          <div className="home-summary-card highlight">
             <h3>Bani rămași din buget</h3>
             <p className={remainingBudget >= 0 ? 'positive' : 'negative'}>
               {remainingBudget} RON
             </p>
           </div>
-          <div className="expense-list">
+          <div className="home-progress-container" title={`Ai cheltuit ${totalExpenses} RON din ${monthlyBudget} RON`}>
+            <label className="home-progress-label">
+              Progres Buget ({((totalExpenses / monthlyBudget) * 100).toFixed(1)}%)
+            </label>
+            <div className="home-progress-bar">
+              <div
+                className="home-progress-fill"
+                style={{
+                  width: `${Math.min((totalExpenses / monthlyBudget) * 100, 100)}%`,
+                  backgroundColor: totalExpenses > monthlyBudget ? '#e74c3c' : '#2ecc71',
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="home-expense-list">
             <h3>Cheltuieli Recente</h3>
             {expenses.length > 0 ? (
-              <ul className="expenses-ul">
+              <ul className="home-expenses-ul">
                 {expenses.map((expense, index) => (
-                  <li key={index} className="expense-item">
-                    <span className="expense-category">{expense.name || 'Fara denumire'}</span>
-                    <span className="expense-amount">
+                  <li key={index} className="home-expense-item">
+                    <span className="home-expense-category">{expense.name || 'Fara denumire'}</span>
+                    <span className="home-expense-amount">
                       {parseFloat(expense.amount).toFixed(2)} RON
                     </span>
-                    <span className="expense-date">
+                    <span className="home-expense-date">
                       {new Date(expense.date).toLocaleDateString('ro-RO', {
                         day: '2-digit',
                         month: 'long',
@@ -286,10 +301,12 @@ const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice
         </div>
       </div>
 
-      <div className="right-container">
-        <div className="chart-container">
+      <div className="home-right-container">
+        <div className="home-chart-container">
           <h3>Bugetul meu {capitalizedMonthName}</h3>
-          <Doughnut data={chartData} options={chartOptions} /> 
+          <div className="home-chart-wrapper">
+          <Doughnut data={chartData} options={chartOptions} />
+          </div>
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@ const AddIncomeBudget = () => {
     if (!user) return;
     try {
       const response = await axios.get('/api/incomes', {
-        params: { user_id: user.id, month: selectedMonth, year: selectedYear },
+        params: { user_id: user.userId, month: selectedMonth, year: selectedYear },
       });
       setIncomes(response.data || []);
     } catch (err) {
@@ -38,7 +38,7 @@ const AddIncomeBudget = () => {
     if (!user) return;
     try {
       const response = await axios.get('/api/monthly_budget', {
-        params: { user_id: user.id, month: selectedMonth, year: selectedYear },
+        params: { user_id: user.userId, month: selectedMonth, year: selectedYear },
       });
       setBudget(response.data?.amount || '');
     } catch (err) {
@@ -62,7 +62,7 @@ const AddIncomeBudget = () => {
       name: incomeName,
       amount: incomeAmount,
       date: incomeDate,
-      user_id: user.id
+      user_id: user.userId
     };
 
     try {
@@ -101,7 +101,7 @@ const AddIncomeBudget = () => {
     try {
       await axios.post('/api/monthly_budget', {
         amount: budget,
-        user_id: user.id,
+        user_id: user.userId,
         month: selectedMonth,
         year: selectedYear
       });

@@ -9,6 +9,8 @@ import {
   LinearScale,
   CategoryScale,
   BarElement,
+  PointElement,
+  LineElement,
 } from 'chart.js';
 import moment from 'moment';
 import './Statistics.css';
@@ -16,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import 'react-datepicker/dist/react-datepicker.css';
 import DatePicker from 'react-datepicker';
 
-ChartJS.register(ArcElement, Tooltip, Legend, LinearScale, CategoryScale, BarElement);
+ChartJS.register(ArcElement, Tooltip, Legend, LinearScale, CategoryScale, BarElement, PointElement, LineElement);
 
 const Statistics = () => {
   const { user } = useAuth();
@@ -52,7 +54,7 @@ const Statistics = () => {
         const response = await axios.get('/api/statistics', {
           params: {
             type: 'general',
-            user_id: user.id,
+            user_id: user.userId,
           },
         });
 
@@ -75,7 +77,7 @@ const Statistics = () => {
     const fetchData = async () => {
       if (!user) return;
 
-      if (type === 'expensesByPeriod' && (!startDate || !endDate)) {
+      if ((type === 'expensesByPeriod' || type === 'expensesByCategory') && (!startDate || !endDate)) {
         return;
       }
 
@@ -91,10 +93,10 @@ const Statistics = () => {
       const params = {
         type: adjustedType,
         category,
-        user_id: user.id,
+        user_id: user.userId,
       };
 
-      if (type === 'expensesByPeriod') {
+      if (type === 'expensesByPeriod' || type === 'expensesByCategory') {
         params.start_date = moment(startDate).format('YYYY-MM-DD');
         params.end_date = moment(endDate).format('YYYY-MM-DD');
       } else {
@@ -184,26 +186,29 @@ const Statistics = () => {
             },
           ],
         };
-      case 'trend':
+      case 'prediction':
         return {
-          labels: statisticsData.labels || [],
+          labels: statisticsData.predictions?.map(p => p.period),
           datasets: [
             {
-              label: 'Cheltuieli',
-              data: statisticsData.expenses || [],
+              label: 'Cheltuieli estimate',
+              data: statisticsData.predictions?.map(p => p.avg_expenses),
               borderColor: '#ff6384',
+              backgroundColor: '#ff6384',
               fill: false,
             },
             {
-              label: 'Venituri',
-              data: statisticsData.incomes || [],
+              label: 'Venituri estimate',
+              data: statisticsData.predictions?.map(p => p.avg_incomes),
               borderColor: '#36a2eb',
+              backgroundColor: '#36a2eb',
               fill: false,
             },
             {
-              label: 'Economii',
-              data: statisticsData.savings || [],
-              borderColor: '#ffce56',
+              label: 'Economii estimate',
+              data: statisticsData.predictions?.map(p => p.estimated_savings),
+              borderColor: '#4caf50',
+              backgroundColor: '#4caf50',
               fill: false,
             },
           ],
@@ -223,16 +228,6 @@ const Statistics = () => {
           ],
         };
 
-      case 'remainingBudget':
-        return {
-          labels: ['Buget Rămas'],
-          datasets: [
-            {
-              data: [statisticsData.remainingBudget ?? 0],
-              backgroundColor: ['#36a2eb'],
-            },
-          ],
-        };
       case 'budgetComparison':
         return {
           labels: ['Cheltuieli', 'Buget'],
@@ -240,6 +235,18 @@ const Statistics = () => {
             {
               data: [statisticsData.expensesSum ?? 0, statisticsData.budgetSum ?? 0],
               backgroundColor: ['#ff6384', '#36a2eb'],
+            },
+          ],
+        };
+      case 'expensesByCategory':
+        return {
+          labels: statisticsData.details.map(item => item.category_name),
+          datasets: [
+            {
+              data: statisticsData.details.map(item => item.total_amount),
+              backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+              ],
             },
           ],
         };
@@ -262,6 +269,51 @@ const Statistics = () => {
   };
 
   const generateTableData = () => {
+    if (type === 'prediction') {
+      const rows = statisticsData.predictions || [];
+
+      if (!rows.length) {
+        return (
+          <div className="statistics-table">
+            <p style={{ marginTop: '1rem', color: '#666' }}>
+              Nu există suficiente date pentru a genera predicții.
+            </p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="statistics-table">
+          <div className="table-info">
+            <span className="info-icon" title="Predicțiile sunt calculate pe baza trendului lunar al datelor tale din ultimele luni, folosind regresie liniară. Dacă există date sezoniere pentru anumite luni, acestea sunt preferate.">
+              ℹ️
+            </span>
+            <span>Estimări generate pe baza istoricului financiar</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Lună</th>
+                <th>Cheltuieli estimate (RON)</th>
+                <th>Venituri estimate (RON)</th>
+                <th>Economii estimate (RON)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{row.period}</td>
+                  <td>{parseFloat(row.avg_expenses).toFixed(2)}</td>
+                  <td>{parseFloat(row.avg_incomes).toFixed(2)}</td>
+                  <td>{parseFloat(row.estimated_savings).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     if (!statisticsData?.details) return null;
 
     if (type === 'unplannedExpenses') {
@@ -304,6 +356,44 @@ const Statistics = () => {
         </div>
       );
     }
+
+    if (type === 'expensesByCategory') {
+      const rows = statisticsData.details;
+
+      if (!rows || rows.length === 0) {
+        return (
+          <div className="statistics-table">
+            <p style={{ marginTop: '1rem', color: '#666' }}>
+              Nu există cheltuieli pentru perioada selectată.
+            </p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="statistics-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Categorie</th>
+                <th>Descriere</th>
+                <th>Total cheltuit (RON)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{row.category_name}</td>
+                  <td>{row.description || '-'}</td>
+                  <td>{parseFloat(row.total_amount).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
 
     if (type === 'budgetComparison') {
       const rows = [...(statisticsData.details || [])].sort((a, b) =>
@@ -465,11 +555,11 @@ const Statistics = () => {
           <label>Tip Statistică:</label>
           <select onChange={(e) => setType(e.target.value)} value={type}>
             <option value="general">Statistică Generală</option>
-            <option value="trend">Trenduri pe termen lung</option>
+            <option value="prediction">Predicție pe 3 luni</option>
             <option value="expensesByPeriod">Cheltuieli/Perioadă</option>
-            <option value="remainingBudget">Buget Rămas</option>
             <option value="budgetComparison">Buget vs Cheltuieli</option>
             <option value="unplannedExpenses">Cheltuieli Impulsive vs Planificate</option>
+            <option value="expensesByCategory">Cheltuieli pe Categorii</option>
           </select>
         </div>
 
@@ -478,7 +568,7 @@ const Statistics = () => {
         </button>
       </div>
 
-      {type === 'expensesByPeriod' && (
+      {(type === 'expensesByPeriod' || type === 'expensesByCategory') && (
         <div className="filters" style={{ marginTop: '1rem' }}>
           <div className="datepicker-wrapper">
             <label>Selectează o perioadă:</label>
@@ -498,7 +588,7 @@ const Statistics = () => {
         </div>
       )}
 
-      {type !== 'expensesByPeriod' && (
+      {type !== 'expensesByPeriod' && type !== 'prediction' && type !== 'expensesByCategory' && (
         <div className="filters">
           <div className="dropdown">
             <label>An:</label>
@@ -537,23 +627,16 @@ const Statistics = () => {
       {(type !== 'expensesByPeriod' || (startDate && endDate)) && statisticsData && (
         <>
           <div className="chart-container">
-            {type === 'trend' ? (
+            {type === 'prediction' ? (
               <Line data={generateChartData()} />
-            ) : type === 'category' ? (
-              <Pie data={generateChartData()} />
-            ) : type === 'expensesByPeriod' ? (
+            ) : type === 'expensesByPeriod' || type === 'budgetComparison' ? (
               <Bar data={generateChartData()} />
-            ) : type === 'remainingBudget' ? (
-              <Pie data={generateChartData()} />
-            ) : type === 'budgetComparison' ? (
-              <Bar data={generateChartData()} />
-            ) : type === 'unplannedExpenses' ? (
+            ) : type === 'expensesByCategory' || type === 'unplannedExpenses' || type === 'category' ? (
               <Pie data={generateChartData()} />
             ) : (
               <Pie data={generateChartData()} />
             )}
           </div>
-
           {generateTableData()}
         </>
       )}

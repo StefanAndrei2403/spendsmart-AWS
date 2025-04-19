@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import './Register.css'; 
+import './Register.css';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
+  const navigate = useNavigate();
+
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,8 +28,28 @@ const Register = () => {
       });
 
       setMessage(response.data.message);
+      setIsSuccess(response.data.message === 'Utilizator înregistrat cu succes');
+
+      if (response.data.message === 'Utilizator înregistrat cu succes') {
+        setIsSuccess(true);
+        setMessage('Utilizator înregistrat cu succes! Redirecționare...');
+
+        setTimeout(() => {
+          navigate('/');
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+        }, 2000);
+      }
+
+
     } catch (error) {
-      setMessage('A apărut o eroare. Te rugăm să încerci din nou.');
+      if (error.response?.data?.message) {
+        setMessage(error.response.data.message);
+        setIsSuccess(false);
+      } else {
+        setMessage('A apărut o eroare. Te rugăm să încerci din nou.');
+      }
     }
   };
 
@@ -69,7 +93,12 @@ const Register = () => {
           </div>
           <button type="submit" className="register-btn">Înregistrează-te</button>
         </form>
-        {message && <p className="register-message">{message}</p>}
+        {message && (
+          <p className={`register-message ${isSuccess ? 'success' : 'error'}`}>
+            {message}
+          </p>
+        )}
+
       </div>
     </div>
   );

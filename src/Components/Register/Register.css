@@ -70,9 +70,14 @@ body {
   .register-btn:hover {
     background-color: #218838;
   }
-  
-  .register-message {
-    margin-top: 20px;
-    font-size: 14px;
-    color: #e74c3c;
+
+  .register-message.success {
+    color: #28a745; /* verde */
+    font-weight: bold;
   }
+  
+  .register-message.error {
+    color: #dc3545; /* roșu */
+    font-weight: bold;
+  }
+  

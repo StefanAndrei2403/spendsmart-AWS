@@ -3,7 +3,9 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import AddCategoryModal from './AddCategoryModal';
 import './AddExpense.css';
+import { FiPlusCircle } from 'react-icons/fi';
 
 const AddExpense = () => {
   const { user } = useAuth();
@@ -21,6 +23,12 @@ const AddExpense = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [plannedImpulsive, setPlannedImpulsive] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [categorySuccessMessage, setCategorySuccessMessage] = useState('');
+
+
 
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
@@ -29,8 +37,11 @@ const AddExpense = () => {
   const fetchCategories = useCallback(async () => {
     try {
       const response = await axios.get('/api/categories');
-      if (Array.isArray(response.data)) {
-        setCategories(response.data);
+      if (Array.isArray(response.data.categories)) {
+        const sorted = response.data.categories.sort((a, b) =>
+          a.name.localeCompare(b.name, 'ro', { sensitivity: 'base' })
+        );
+        setCategories(sorted);
       } else {
         console.error("Expected an array for categories:", response.data);
       }
@@ -48,7 +59,7 @@ const AddExpense = () => {
     try {
       const response = await axios.get(`/api/expenses`, {
         params: {
-          user_id: user.id,
+          user_id: user.userId,
           month: selectedMonth,
           year: selectedYear
         }
@@ -84,7 +95,7 @@ const AddExpense = () => {
       amount: expenseAmount,
       date: expenseDate,
       category_id: categoryId,
-      user_id: user.id,
+      user_id: user.userId,
       planned_impulsive: plannedImpulsive
     };
 
@@ -108,6 +119,36 @@ const AddExpense = () => {
       setErrorMessage('A apărut o eroare. Te rugăm să încerci din nou.');
     }
   };
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim() || !newCategoryDescription.trim()) {
+      setCategorySuccessMessage('Completează toate câmpurile!');
+      return;
+    }
+
+    try {
+      const response = await axios.post('/categories', {
+        name: newCategory,
+        description: newCategoryDescription
+      });
+
+      setCategories([...categories, response.data.category]); // response.data.category în backend
+      setCategoryId(response.data.category.id); // selectează automat
+      setNewCategory('');
+      setNewCategoryDescription('');
+      setCategorySuccessMessage('Categorie adăugată cu succes! ✅');
+
+      // ascunde mesajul după 2-3 secunde
+      setTimeout(() => {
+        setShowAddCategory(false);
+        setCategorySuccessMessage('');
+      }, 2000);
+    } catch (error) {
+      console.error('Eroare la adăugarea categoriei:', error);
+      setCategorySuccessMessage('Eroare la adăugare ❌');
+    }
+  };
+
 
   // Handle filter change
   const handleMonthChange = (e) => {
@@ -206,18 +247,39 @@ const AddExpense = () => {
           </div>
           <div>
             <label>Categorie</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Selectează o categorie</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+            <div className="category-wrapper">
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">Selectează o categorie</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <FiPlusCircle
+                className="add-category-icon"
+                onClick={() => setShowAddCategory(true)}
+                title="Adaugă categorie nouă"
+              />
+            </div>
+
+            {showAddCategory && (
+              <AddCategoryModal
+                onClose={() => setShowAddCategory(false)}
+                onAdd={handleAddCategory}
+                name={newCategory}
+                setName={setNewCategory}
+                description={newCategoryDescription}
+                setDescription={setNewCategoryDescription}
+                message={categorySuccessMessage} // trimite mesajul aici
+              />
+            )}
           </div>
+
+
           <div>
             <label>
               <input
@@ -289,8 +351,8 @@ const AddExpense = () => {
                           <button onClick={handleCancelEdit}>Anulează editarea</button>
                         ) : (
                           <>
-                          <button onClick={() => handleEdit(expense)}>Editează</button>
-                          <button onClick={() => handleDelete(expense.id)} className="delete-button">Șterge</button>
+                            <button onClick={() => handleEdit(expense)}>Editează</button>
+                            <button onClick={() => handleDelete(expense.id)} className="delete-button">Șterge</button>
                           </>
                         )}
                       </td>

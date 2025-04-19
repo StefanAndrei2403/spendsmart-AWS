@@ -32,6 +32,7 @@
     "react-router": "^7.4.1",
     "react-router-dom": "^7.4.1",
     "react-scripts": "5.0.1",
+    "regression": "^2.0.1",
     "sequelize": "^6.37.7",
     "spendsmart": "file:",
     "web-vitals": "^2.1.4"
