@@ -233,6 +233,7 @@ const Statistics = () => {
           labels: ['Cheltuieli', 'Buget'],
           datasets: [
             {
+              label:'Buget vs Cheltuieli',
               data: [statisticsData.expensesSum ?? 0, statisticsData.budgetSum ?? 0],
               backgroundColor: ['#ff6384', '#36a2eb'],
             },
@@ -240,7 +241,7 @@ const Statistics = () => {
         };
       case 'expensesByCategory':
         return {
-          labels: statisticsData.details.map(item => item.category_name),
+          labels: (statisticsData.details || []).map(item => item.category_name),
           datasets: [
             {
               data: statisticsData.details.map(item => item.total_amount),
@@ -548,28 +549,35 @@ const Statistics = () => {
 
   return (
     <div className="statistics-container">
-      <h1>Statistici Financiare</h1>
+      <h1 className="statistics-title">
+        📊 Statistici Financiare
+      </h1>
 
+      {/* Filtre */}
       <div className="filters-row">
         <div className="dropdown">
           <label>Tip Statistică:</label>
           <select onChange={(e) => setType(e.target.value)} value={type}>
-            <option value="general">Statistică Generală</option>
+            <option value="general">Statistică generală</option>
             <option value="prediction">Predicție pe 3 luni</option>
             <option value="expensesByPeriod">Cheltuieli/Perioadă</option>
-            <option value="budgetComparison">Buget vs Cheltuieli</option>
-            <option value="unplannedExpenses">Cheltuieli Impulsive vs Planificate</option>
-            <option value="expensesByCategory">Cheltuieli pe Categorii</option>
+            <option value="budgetComparison">Buget vs cheltuieli</option>
+            <option value="unplannedExpenses">Cheltuieli impulsive vs planificate</option>
+            <option value="expensesByCategory">Cheltuieli pe categorii</option>
           </select>
         </div>
 
-        <button className="clear-btn" onClick={handleClearFilters}>
-          Resetează filtrele
-        </button>
+        <div className="dropdown-button-wrapper">
+          <label style={{ opacity: 0 }}>⠀</label>
+          <button className="clear-btn" onClick={handleClearFilters}>
+            ♻️ Resetează filtrele
+          </button>
+        </div>
       </div>
 
+      {/* Calendar */}
       {(type === 'expensesByPeriod' || type === 'expensesByCategory') && (
-        <div className="filters" style={{ marginTop: '1rem' }}>
+        <div className="filters">
           <div className="datepicker-wrapper">
             <label>Selectează o perioadă:</label>
             <DatePicker
@@ -588,30 +596,29 @@ const Statistics = () => {
         </div>
       )}
 
+      {/* Dropdowns pentru An / Lună / Zi */}
       {type !== 'expensesByPeriod' && type !== 'prediction' && type !== 'expensesByCategory' && (
         <div className="filters">
           <div className="dropdown">
             <label>An:</label>
             <select onChange={(e) => setYear(e.target.value)} value={year}>
               <option value="">Alege anul</option>
-              {availableYears.map((yearOption) => (
-                <option key={yearOption} value={yearOption}>{yearOption}</option>
+              {availableYears.map((y) => (
+                <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
-
           <div className="dropdown">
             <label>Lună:</label>
             <select onChange={(e) => setMonth(e.target.value)} value={month} disabled={!year}>
               <option value="">Alege luna</option>
-              {availableMonths.map((monthOption) => (
-                <option key={monthOption} value={monthOption}>
-                  {moment().month(monthOption - 1).format('MMMM')}
+              {availableMonths.map((m) => (
+                <option key={m} value={m}>
+                  {moment().month(m - 1).format('MMMM')}
                 </option>
               ))}
             </select>
           </div>
-
           <div className="dropdown">
             <label>Zi:</label>
             <select onChange={(e) => setDay(e.target.value)} value={day} disabled={!month}>
@@ -624,21 +631,21 @@ const Statistics = () => {
         </div>
       )}
 
+      {/* Grafic + Tabel - afișate în 2 coloane */}
       {(type !== 'expensesByPeriod' || (startDate && endDate)) && statisticsData && (
-        <>
+        <div className="statistics-content">
+          <div className="statistics-table-wrapper">{generateTableData()}</div>
+
           <div className="chart-container">
             {type === 'prediction' ? (
               <Line data={generateChartData()} />
             ) : type === 'expensesByPeriod' || type === 'budgetComparison' ? (
               <Bar data={generateChartData()} />
-            ) : type === 'expensesByCategory' || type === 'unplannedExpenses' || type === 'category' ? (
-              <Pie data={generateChartData()} />
             ) : (
               <Pie data={generateChartData()} />
             )}
           </div>
-          {generateTableData()}
-        </>
+        </div>
       )}
     </div>
   );

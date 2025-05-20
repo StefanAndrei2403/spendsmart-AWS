@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ path: './.env.production' });
 
 module.exports = (req, res, next) => {
   // Acceptă token din: 1) Header, 2) Cookies, 3) Body

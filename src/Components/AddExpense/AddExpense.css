@@ -101,6 +101,9 @@
   border-collapse: collapse;
   margin-top: 1rem;
   font-weight: bold;
+  overflow: visible !important; /* important dacă ai un scroll-wrapper */
+  position: relative;
+  z-index: 0;
 }
 
 .expenses-table th,
@@ -113,6 +116,9 @@
 
 .expenses-table th {
   background-color: #f0f0f0;
+  position: relative; /* permite poziționarea absolută a dropdown-ului */
+  overflow: visible !important; /* asigură că dropdown-ul nu e tăiat */
+  z-index: 1;
 }
 
 .expenses-table button {

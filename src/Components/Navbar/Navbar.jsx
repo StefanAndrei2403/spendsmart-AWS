@@ -1,10 +1,9 @@
+
 import React, { useContext, useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, NavLink } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import './Navbar.css';
-import { FaUserCircle } from 'react-icons/fa';
-import { NavLink } from 'react-router-dom';
-
+import { FaUserCircle, FaSignOutAlt, FaHome, FaPlus, FaChartPie, FaUserCog } from 'react-icons/fa';
 
 const Navbar = () => {
   const { isAuthenticated, logout } = useContext(AuthContext);
@@ -12,7 +11,6 @@ const Navbar = () => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Închide dropdown-ul dacă se apasă în afara lui
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -20,60 +18,57 @@ const Navbar = () => {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
-
-  const handleProfileClick = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
-
-  const handleAccountData = () => {
-    navigate('/account'); // asigură-te că ai o rută pentru Datele contului
-    setDropdownOpen(false);
-  };
-
-  const handlePasswordReset = () => {
-    navigate('/reset-password'); // sau către o pagină specială de reset
-    setDropdownOpen(false);
-  };
 
   const handleLogout = () => {
     logout();
-    setDropdownOpen(false);
+    navigate('/login');
   };
 
   return (
-    <div className="navbar">
-      {isAuthenticated && (
+    <>
+      <div className="navbar">
         <div className="navbar-links">
-          <NavLink to="/home" className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}>Acasă</NavLink>
-          <NavLink to="/add-income" className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}>Administrează Venituri</NavLink>
-          <NavLink to="/add-expense" className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}>Administrează Cheltuieli</NavLink>
-          <NavLink to="/statistics" className={({ isActive }) => isActive ? 'navbar-link active' : 'navbar-link'}>Statistici</NavLink>
+          <NavLink to="/" className="navbar-link">
+            <FaHome /> Acasă
+          </NavLink>
+          <NavLink to="/add-income" className="navbar-link">
+            <FaPlus /> Venituri
+          </NavLink>
+          <NavLink to="/add-expense" className="navbar-link">
+            <FaPlus /> Cheltuieli
+          </NavLink>
+          
+          <NavLink to="/statistics" className="navbar-link">
+            <FaChartPie /> Statistici
+          </NavLink>
         </div>
-      )
-      }
-
-      {
-        isAuthenticated ? (
-          <div className="profile-dropdown" ref={dropdownRef}>
-            <button className="profile-button" onClick={handleProfileClick}>
-              <FaUserCircle size={20} />
-              Profilul meu
+        {isAuthenticated && (
+          <div className="navbar-links">
+            <button className="navbar-link" onClick={() => setDropdownOpen(!dropdownOpen)}>
+              <FaUserCircle /> Profilul meu
             </button>
             {dropdownOpen && (
-              <div className="dropdown-menu">
-                <button onClick={handleAccountData}>Datele contului</button>
-                <button onClick={handlePasswordReset}>Resetează parola</button>
-                <button onClick={handleLogout}>Logout</button>
+              <div className="profile-dropdown fade-in" ref={dropdownRef}>
+                <Link to="/account" onClick={() => setDropdownOpen(false)}>
+                  <FaUserCog /> Datele contului
+                </Link>
+                <Link to="/change-password" onClick={() => setDropdownOpen(false)}>
+                  🔒 Resetează parola
+                </Link>
+                <button onClick={handleLogout}>
+                  <FaSignOutAlt /> Logout
+                </button>
               </div>
             )}
           </div>
-        ) : (
-          <Link to="/login" className="navbar-link">Login</Link>
-        )
-      }
-    </div >
+        )}
+      </div>
+      <div className="navbar-space"></div>
+    </>
   );
 };
 

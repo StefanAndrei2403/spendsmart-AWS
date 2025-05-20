@@ -6,8 +6,11 @@ import AppContent from './AppContent'; // Creăm un component separat pentru log
 import axios from 'axios';
 
 
+
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+axios.defaults.baseURL =
+  process.env.REACT_APP_API_URL ||
+  'https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net';
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('auth_token');
   if (token) {
@@ -15,6 +18,8 @@ axios.interceptors.request.use(config => {
   }
   return config;
 });
+
+console.log('🧪 API URL din .env:', process.env.REACT_APP_API_URL);
 
 // Interceptor pentru response
 axios.interceptors.response.use(

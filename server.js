@@ -13,7 +13,7 @@ const auth = require('./middleware/auth');
 
 
 // Încarcă variabilele din fișierul .env
-dotenv.config({ path: './.env' });
+dotenv.config({ path: './.env.production' });
 
 const app = express();
 app.use(express.json());
@@ -30,11 +30,14 @@ app.use(cors({
 
 // Crează conexiunea la baza de date PostgreSQL
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: process.env.PGPORT,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 // Verifică conexiunea la baza de date
@@ -50,7 +53,7 @@ pool.connect((err, client, release) => {
 // Configurează clientul Google
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Endpoint de login tradițional
+// Endpoint de login 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -340,7 +343,7 @@ app.post('/recover-password-username', async (req, res) => {
     await pool.query('UPDATE users SET reset_token = $1, reset_token_expiration = $2 WHERE username = $3', [resetToken, tokenExpiration, username]);
 
     // Trimite email cu link-ul de resetare a parolei
-    const resetLink = `http://localhost:8080/reset-password?token=${resetToken}`;
+    const resetLink = `https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net/reset-password/${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -389,7 +392,7 @@ app.post('/recover-password-email', async (req, res) => {
     await pool.query('UPDATE users SET reset_token = $1, reset_token_expiration = $2 WHERE email = $3', [resetToken, tokenExpiration, email]);
 
     // Trimite email cu link-ul de resetare a parolei
-    const resetLink = `http://localhost:8080/reset-password?token=${resetToken}`;
+    const resetLink = `https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net/reset-password/${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,

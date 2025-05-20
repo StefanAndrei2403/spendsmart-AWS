@@ -1,23 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Doughnut } from 'react-chartjs-2';
+import { FaMoneyBillWave, FaChartPie, FaWallet } from 'react-icons/fa';
 import './Home.css';
 import {
   Chart as ChartJS,
-  ArcElement, // Adaugă ArcElement pentru a crea un Donut Chart
+  ArcElement,
   Title,
   Tooltip,
   Legend
 } from 'chart.js';
 import { useNavigate } from 'react-router-dom';
 
-// Register ChartJS components
-ChartJS.register(
-  ArcElement, // Înregistrează ArcElement pentru a crea un Donut Chart
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
 const Home = () => {
   const navigate = useNavigate();
@@ -36,48 +32,34 @@ const Home = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
-        // Verifică dacă există token în localStorage
         const token = localStorage.getItem('auth_token');
         if (!token) {
-          // Dacă nu există token, redirecționează la login
           navigate('/');
           return;
         }
-
-        // Adaugă token-ul la antetul cererii
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        // Fetch user profile
-        const profileResponse = await axios.get('/profile');
-        if (profileResponse.data && profileResponse.data.user) {
-          setUser(profileResponse.data.user);  // Setează profilul utilizatorului
-        } else {
-          setError('Eroare la obținerea profilului.');
-          return;
+        const profileRes = await axios.get('/profile');
+        if (profileRes.data?.user) {
+          setUser(profileRes.data.user);
         }
 
-        // Fetch financial data
-        const financialResponse = await axios.get('/api/get-financial-data');
-        const { income, expenses, monthly_budget } = financialResponse.data;
+        const finRes = await axios.get('/api/get-financial-data');
+        const { income, expenses, monthly_budget } = finRes.data;
 
         setIncome(income || 0);
         setExpenses(expenses || []);
         setMonthlyBudget(monthly_budget || 0);
-
         setError(null);
       } catch (err) {
         console.error('Error fetching data:', err);
-
         if (err.response?.status === 401) {
-          // Handle unauthorized access
           localStorage.removeItem('auth_token');
           delete axios.defaults.headers.common['Authorization'];
           navigate('/');
           return;
         }
-
-        setError(err.response?.data?.message || 'Failed to fetch data');
+        setError('Eroare la încărcarea datelor.');
       } finally {
         setLoading(false);
       }
@@ -86,40 +68,17 @@ const Home = () => {
     fetchData();
   }, [navigate]);
 
-  // Calculate total expenses
-  const totalExpenses = expenses.reduce((acc, expense) => acc + (expense.amount ? parseFloat(expense.amount) : 0), 0);
-  const formattedTotalExpenses = totalExpenses && !isNaN(totalExpenses) ? totalExpenses.toFixed(2) : '0.00';
+  const totalExpenses = expenses.reduce((acc, exp) => acc + (parseFloat(exp.amount) || 0), 0);
+  const remainingBudget = monthlyBudget - totalExpenses;
 
-  // Calculate remaining budget
-  const remainingBudgetValue = monthlyBudget - totalExpenses;
-  const remainingBudgetFormatted = remainingBudgetValue.toLocaleString('ro-RO', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-  // Prepare chart data
   const chartData = {
-    labels: ['Cheltuieli', 'Ramas din buget'],
+    labels: ['Cheltuieli', 'Rămas din buget'],
     datasets: [
       {
-        data: [totalExpenses, remainingBudgetValue ],
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.8)',
-          'rgba(75, 192, 192, 0.8)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(75, 192, 192, 1)'
-        ],
-        borderWidth: 2,
-        hoverBackgroundColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(75, 192, 192, 1)'
-        ],
-        hoverBorderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(75, 192, 192, 1)'
-        ]
+        data: [totalExpenses, remainingBudget],
+        backgroundColor: ['#e74c3c', '#2ecc71'],
+        borderColor: ['#c0392b', '#27ae60'],
+        borderWidth: 1
       }
     ]
   };
@@ -129,188 +88,111 @@ const Home = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
+        position: 'bottom',
         labels: {
+          padding: 16,
           font: {
-            size: 16,
-            weight: 'bold',
-            family: 'Arial, sans-serif'
-          },
-          padding: 20
+            size: 14
+          }
         }
       },
       title: {
         display: true,
         text: 'Comparație Buget vs Cheltuieli',
         font: {
-          size: 20,
-          weight: 'bold',
-          family: 'Arial, sans-serif'
+          size: 18,
+          weight: 'bold'
         },
         padding: {
-          bottom: 30
+          bottom: 20
         }
-      },
-      tooltip: {
-        callbacks: {
-          label: function (tooltipItem) {
-            const value = tooltipItem.raw;
-            return `${tooltipItem.label}: ${value} RON`;
-          }
-        }
-      }
-    },
-    animation: {
-      duration: 1000,
-      easing: 'easeOutBounce'
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          stepSize: 100,
-          font: {
-            size: 14
-          },
-          callback: function (value) {
-            if (value === 0 || value === 1) {
-              return '';
-            }
-            return value;
-          }
-        },
-        grid: {
-          display: false,
-          borderColor: 'transparent', // Asigură-te că linia de margine a axei Y este transparentă
-          drawBorder: false // Evită desenarea marginilor pe axa Y
-        },
-        borderWidth: 0
-      },
-      x: {
-        ticks: {
-          font: {
-            size: 16,
-            weight: 'bold'
-          }
-        },
-        grid: {
-          display: false,
-          borderColor: 'transparent', // Asigură-te că linia de margine a axei X este transparentă
-          drawBorder: false // Evită desenarea marginilor pe axa X
-        },
-        borderWidth: 0
       }
     },
     layout: {
       padding: {
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: 10
+        bottom: 40 // spațiu extra jos
       }
     }
   };
 
-  // Render the chart
-  if (loading) {
-    return (
-      <div className="home-root-container">
-        <div className="loading-spinner">
-          <p>Se încarcă datele...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="home-root-container">
-        <div className="error-message">
-          <p>Eroare: {error}</p>
-          <button onClick={() => window.location.reload()}>Reîncarcă</button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <p style={{ textAlign: 'center' }}>Se încarcă datele...</p>;
+  if (error) return <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>;
 
   return (
     <div className="home-root-container">
-      <div className="home-left-container">
-        <div className="welcome-section">
-          <h2>Bun venit, {user?.username || 'Utilizator'}!</h2>
-          <p>Email: {user?.email || 'N/A'}</p>
+      <div className="home-header">
+        <h2>Bine ai revenit, {user?.username || 'Utilizator'}.</h2>
+      </div>
+
+      <div className="home-summary-boxes">
+        <div className="home-summary-card green">
+          <FaMoneyBillWave className="summary-icon" />
+          <div className="summary-text">
+            <h3>Venituri {capitalizedMonthName}</h3>
+            <p>{parseFloat(income || 0).toFixed(2)} RON</p>
+          </div>
         </div>
-
-        <div className="financial-summary">
-          <div className="home-summary-card">
-            <h3>Venituri luna {capitalizedMonthName}</h3>
-            <p>{income} RON</p>
+        <div className="home-summary-card red">
+          <FaChartPie className="summary-icon" />
+          <div className="summary-text">
+            <h3>Cheltuieli {capitalizedMonthName}</h3>
+            <p>{parseFloat(totalExpenses || 0).toFixed(2)} RON</p>
           </div>
-
-          <div className="home-summary-card">
-            <h3>Bugetul lunii {capitalizedMonthName} </h3>
-            <p>{monthlyBudget} RON</p>
-          </div>
-
-          <div className="home-summary-card">
-            <h3>Cheltuieli luna {capitalizedMonthName}</h3>
-            <p>{formattedTotalExpenses} RON</p>
-          </div>
-
-          <div className="home-summary-card highlight">
-            <h3>Bani rămași din buget</h3>
-            <p className={remainingBudgetValue >= 0 ? 'positive' : 'negative'}>
-              {remainingBudgetFormatted} RON
-            </p>
-          </div>
-          <div className="home-progress-container" title={`Ai cheltuit ${totalExpenses} RON din ${monthlyBudget} RON`}>
-            <label className="home-progress-label">
-              Progres Buget ({((totalExpenses / monthlyBudget) * 100).toFixed(1)}%)
-            </label>
-            <div className="home-progress-bar">
-              <div
-                className="home-progress-fill"
-                style={{
-                  width: `${Math.min((totalExpenses / monthlyBudget) * 100, 100)}%`,
-                  backgroundColor: totalExpenses > monthlyBudget ? '#e74c3c' : '#2ecc71',
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="home-expense-list">
-            <h3>Cheltuieli Recente</h3>
-            {expenses.length > 0 ? (
-              <ul className="home-expenses-ul">
-                {expenses.map((expense, index) => (
-                  <li key={index} className="home-expense-item">
-                    <span className="home-expense-category">{expense.name || 'Fara denumire'}</span>
-                    <span className="home-expense-amount">
-                      {parseFloat(expense.amount).toFixed(2)} RON
-                    </span>
-                    <span className="home-expense-date">
-                      {new Date(expense.date).toLocaleDateString('ro-RO', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>Nu există cheltuieli înregistrate.</p>
-            )}
+        </div>
+        <div className="home-summary-card blue">
+          <FaWallet className="summary-icon" />
+          <div className="summary-text">
+            <h3>Buget luna {capitalizedMonthName}</h3>
+            <p>{parseFloat(monthlyBudget || 0).toFixed(2)} RON</p>
           </div>
         </div>
       </div>
 
-      <div className="home-right-container">
-        <div className="home-chart-container">
-          <h3>Bugetul meu {capitalizedMonthName}</h3>
-          <div className="home-chart-wrapper">
-            <Doughnut data={chartData} options={chartOptions} />
-          </div>
+      <div className="budget-progress-wrapper">
+        <div className="budget-progress-bar">
+          <div
+            className="budget-progress-fill"
+            style={{
+              width: `${Math.min((totalExpenses / monthlyBudget) * 100, 100)}%`,
+              backgroundColor: totalExpenses > monthlyBudget ? '#e74c3c' : '#2ecc71',
+            }}
+          />
+        </div>
+        <p className="budget-progress-text">
+          Ai cheltuit {parseFloat(totalExpenses || 0).toFixed(2)} RON din bugetul de {parseFloat(monthlyBudget || 0).toFixed(2)} RON
+        </p>
+      </div>
+
+      <div className="home-sections">
+        <div className="section">
+          <h3>Cheltuieli Recente</h3>
+          {expenses.length > 0 ? (
+            <table className="home-expense-table">
+              <thead>
+                <tr>
+                  <th>Cheltuială</th>
+                  <th>Suma</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.slice(0, 5).map((exp, idx) => (
+                  <tr key={idx}>
+                    <td>{exp.name}</td>
+                    <td className="amount">{parseFloat(exp.amount).toFixed(2)} RON</td>
+                    <td className="date">{new Date(exp.date).toLocaleDateString('ro-RO')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p>Nu există cheltuieli recente.</p>
+          )}
+        </div>
+
+        <div className="section" style={{ height: '300px' }}>
+          <h3>Comparație Buget vs Cheltuieli pentru {capitalizedMonthName}</h3>
+          <Doughnut data={chartData} options={chartOptions} />
         </div>
       </div>
     </div>
