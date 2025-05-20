@@ -1,8 +1,12 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import { FiPlus, FiEdit, FiCalendar, FiTrendingUp } from 'react-icons/fi';
+import EditIncomeModal from './EditIncomeModal';
+import EditBudgetModal from './EditBudgetModal';
 import './AddIncomeBudget.css';
 
 const AddIncomeBudget = () => {
@@ -11,14 +15,16 @@ const AddIncomeBudget = () => {
   const [incomeAmount, setIncomeAmount] = useState('');
   const [incomeDate, setIncomeDate] = useState('');
   const [incomes, setIncomes] = useState([]);
-  const [editingIncome, setEditingIncome] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [calendarVisible, setCalendarVisible] = useState(false);
   const [budget, setBudget] = useState('');
-  const [editingBudget, setEditingBudget] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [incomeToEdit, setIncomeToEdit] = useState(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
 
@@ -55,6 +61,7 @@ const AddIncomeBudget = () => {
     e.preventDefault();
     if (!incomeName || !incomeAmount || !incomeDate) {
       setErrorMessage("Completează toate câmpurile pentru venit!");
+      setSuccessMessage('');
       return;
     }
 
@@ -66,167 +73,153 @@ const AddIncomeBudget = () => {
     };
 
     try {
-      if (editingIncome) {
-        await axios.put(`/api/incomes/${editingIncome.id}`, data);
-        setSuccessMessage("Venitul a fost actualizat cu succes!");
-      } else {
-        await axios.post('/api/incomes', data);
-        setSuccessMessage("Venitul a fost adăugat cu succes!");
-      }
+      await axios.post('/api/incomes', data);
+      setSuccessMessage("Venitul a fost adăugat cu succes!");
+      setErrorMessage('');
       setIncomeName('');
       setIncomeAmount('');
       setIncomeDate('');
-      setEditingIncome(null);
       fetchIncomes();
     } catch (err) {
-      console.error("Eroare la adăugare/editare venit:", err);
+      setErrorMessage("Eroare la adăugarea venitului!");
+      setSuccessMessage('');
+      console.error("Eroare la adăugare venit:", err);
     }
   };
 
-  const handleEditIncome = (income) => {
-    setIncomeName(income.name);
-    setIncomeAmount(income.amount);
-    setIncomeDate(income.date);
-    setEditingIncome(income);
-  };
-
-  const handleCancelEdit = () => {
-    setIncomeName('');
-    setIncomeAmount('');
-    setIncomeDate('');
-    setEditingIncome(null);
-  };
-
-  const handleSaveBudget = async () => {
-    try {
-      await axios.post('/api/monthly_budget', {
-        amount: budget,
-        user_id: user.userId,
-        month: selectedMonth,
-        year: selectedYear
-      });
-      setSuccessMessage("Bugetul a fost salvat cu succes!");
-      setEditingBudget(false);
-    } catch (err) {
-      console.error("Eroare la salvarea bugetului:", err);
-    }
-  };
-
-  const handleDateChange = (date) => {
+  const handleMonthChange = (date) => {
     setSelectedMonth(date.getMonth() + 1);
     setSelectedYear(date.getFullYear());
-    setCalendarVisible(false);
+    setMonthPickerOpen(false);
+  };
+
+  const handleMonthPickerToggle = () => {
+    setMonthPickerOpen((prev) => !prev);
   };
 
   return (
-    <div className="add-income-container">
-      {/* FORMULAR VENIT */}
-      <div className="form-section">
-        <h2>{editingIncome ? 'Editează Venit' : 'Adaugă Venit'}</h2>
+    <div className="income-grid">
+      <div className="income-section card">
+        <h2><FiPlus /> Adaugă Venit</h2>
         {errorMessage && <div className="error-message">{errorMessage}</div>}
         {successMessage && <div className="success-message">{successMessage}</div>}
         <form onSubmit={handleSubmitIncome}>
-          <div>
-            <label>Nume Venit</label>
-            <input
-              type="text"
-              value={incomeName}
-              onChange={(e) => setIncomeName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Sumă Venit</label>
-            <input
-              type="number"
-              value={incomeAmount}
-              onChange={(e) => setIncomeAmount(e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Data</label>
-            <input
-              type="date"
-              value={incomeDate}
-              onChange={(e) => setIncomeDate(e.target.value)}
-            />
-          </div>
-          <button type="submit">
-            {editingIncome ? "Salvează Modificările" : "Adaugă Venit"}
-          </button>
-        </form>
-        {editingIncome && (
-          <button onClick={handleCancelEdit} className="cancel-edit-button">
-            Anulează editarea
-          </button>
-        )}
-      </div>
-
-      {/* LISTĂ VENITURI */}
-      <div className="list-section">
-        <h2>Veniturile mele</h2>
-        <div className="filter-container">
-          <label>Lună și An:</label>
-          <button onClick={() => setCalendarVisible(!calendarVisible)}>
-            {selectedMonth}/{selectedYear}
-          </button>
-          {calendarVisible && (
-            <DatePicker
-              selected={new Date(selectedYear, selectedMonth - 1)}
-              onChange={handleDateChange}
-              dateFormat="MM/yyyy"
-              showMonthYearPicker
-            />
-          )}
-        </div>
-        <table className="expenses-table">
-          <thead>
-            <tr>
-              <th>Nume</th>
-              <th>Sumă</th>
-              <th>Data</th>
-              <th>Acțiune</th>
-            </tr>
-          </thead>
-          <tbody>
-            {incomes.length === 0 ? (
-              <tr><td colSpan="4">Nu ai venituri în luna selectată.</td></tr>
-            ) : (
-              incomes.map(income => (
-                <tr key={income.id}>
-                  <td>{income.name}</td>
-                  <td>{income.amount} RON</td>
-                  <td>{new Date(income.date).toLocaleDateString('ro-RO')}</td>
-                  <td><button onClick={() => handleEditIncome(income)}>Editează</button></td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* SECȚIUNE BUGET */}
-      <div className="budget-section">
-        <h2>Buget pentru luna {selectedMonth}/{selectedYear}</h2>
-        {successMessage && <div className="success-message">{successMessage}</div>}
-        {errorMessage && <div className="error-message">{errorMessage}</div>}
-        <div className="budget-controls">
+          <input
+            type="text"
+            placeholder="Nume venit"
+            value={incomeName}
+            onChange={(e) => setIncomeName(e.target.value)}
+          />
           <input
             type="number"
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
-            placeholder="Introdu bugetul"
-            disabled={!editingBudget}
+            placeholder="Sumă venit"
+            value={incomeAmount}
+            onChange={(e) => setIncomeAmount(e.target.value)}
           />
-          {!editingBudget ? (
-            <button onClick={() => setEditingBudget(true)}>Editează Buget</button>
-          ) : (
-            <>
-              <button onClick={handleSaveBudget}>Salvează Modificările</button>
-              <button onClick={() => setEditingBudget(false)} className="cancel-edit-button">Anulează</button>
-            </>
+          <div className="datepicker-wrapper" style={{ overflow: 'visible' }}>
+            <FiCalendar className="calendar-icon" />
+            <DatePicker
+              selected={incomeDate}
+              onChange={(date) => setIncomeDate(date)}
+              placeholderText="Selectează data"
+              dateFormat="dd/MM/yyyy"
+            />
+          </div>
+          <button type="submit" className="primary-btn">Adaugă Venit</button>
+        </form>
+      </div>
+
+      <div className="right-column">
+        <div className="income-section card">
+          <div className="income-header">
+            <h2><FiTrendingUp /> Veniturile Mele - {selectedMonth}/{selectedYear}</h2>
+            <button className="month-picker-btn" onClick={handleMonthPickerToggle}>
+              <FiCalendar /> Selectează luna
+            </button>
+          </div>
+          {monthPickerOpen && (
+            <DatePicker
+              selected={new Date(selectedYear, selectedMonth - 1)}
+              onChange={handleMonthChange}
+              dateFormat="MM/yyyy"
+              showMonthYearPicker
+              inline
+            />
           )}
+          <table className="income-table">
+            <thead>
+              <tr>
+                <th>Nume</th>
+                <th>Sumă</th>
+                <th>Data</th>
+                <th>Acțiune</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incomes.map((income) => (
+                <tr key={income.id}>
+                  <td>{income.name}</td>
+                  <td>{Number(income.amount).toFixed(2)} RON</td>
+                  <td>{new Date(income.date).toLocaleDateString('ro-RO')}</td>
+                  <td>
+                    <button className="edit-btn" onClick={() => {
+                      setIncomeToEdit(income);
+                      setModalIsOpen(true);
+                    }}>
+                      <FiEdit /> Editează
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="income-section card">
+          <h2><FiTrendingUp /> Buget pentru luna {selectedMonth}/{selectedYear}</h2>
+          <div className="budget-form">
+            <input
+              type="number"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+            />
+            <button onClick={() => setBudgetModalOpen(true)} className="primary-btn">Editează Buget</button>
+          </div>
         </div>
       </div>
+
+      {modalIsOpen && (
+        <EditIncomeModal
+          isOpen={modalIsOpen}
+          onRequestClose={() => setModalIsOpen(false)}
+          income={incomeToEdit}
+          onSave={(updatedIncome) => {
+            axios.put(`/api/incomes/${updatedIncome.id}`, {
+              ...updatedIncome,
+              user_id: user.userId
+            }).then(fetchIncomes);
+          }}
+        />
+      )}
+
+      {budgetModalOpen && (
+        <EditBudgetModal
+          isOpen={budgetModalOpen}
+          onRequestClose={() => setBudgetModalOpen(false)}
+          budget={budget}
+          onSave={(newAmount) => {
+            axios.post('/api/monthly_budget', {
+              user_id: user.userId,
+              amount: newAmount,
+              month: selectedMonth,
+              year: selectedYear
+            }).then(() => {
+              setBudget(newAmount);
+              fetchBudget();
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

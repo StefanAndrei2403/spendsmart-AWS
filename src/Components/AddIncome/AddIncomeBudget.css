@@ -1,106 +1,234 @@
-.add-income-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 2rem;
-    background: rgba(255, 255, 255, 0.15);
-    padding: 2rem;
-    border-radius: 16px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-    color: #333;
+
+/* Layout principal */
+.income-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: auto;
+  align-items: start;
 }
 
-.add-income-container .form-section,
-.add-income-container .list-section,
-.add-income-container .budget-section {
-    flex: 1 1 30%;
-    min-width: 300px;
+@media (max-width: 900px) {
+  .income-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.add-income-container h2 {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    color: #2c3e50;
+/* Panel stânga fix */
+.income-grid > .income-section:first-child {
+  align-self: flex-start;
 }
 
-.add-income-container form div,
-.add-income-container .budget-section div {
-    margin-bottom: 1rem;
+/* Dreapta coloană */
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-.add-income-container label {
-    font-weight: 600;
-    display: block;
-    margin-bottom: 0.5rem;
+/* Carduri */
+.card {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.add-income-container input[type="text"],
-.add-income-container input[type="number"],
-.add-income-container input[type="date"] {
-    width: 100%;
-    padding: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background-color: #f9f9f9;
+/* Headere */
+.income-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1e2a3a;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-.add-income-container button {
-    padding: 0.6rem 1.2rem;
-    background-color: #2980b9;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
+/* Inputuri și butoane */
+form input,
+.budget-form input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s ease;
 }
 
-.add-income-container button:hover {
-    background-color: #1c5980;
+.primary-btn {
+  padding: 0.7rem 1.2rem;
+  background-color: #007bff;
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
 }
 
-.add-income-container .expenses-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-    font-weight: bold;
+.primary-btn:hover {
+  background-color: #0056b3;
 }
 
-.add-income-container .expenses-table th,
-.add-income-container .expenses-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: left;
+/* Buton Selectează luna */
+.income-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.add-income-container .expenses-table th {
-    background-color: #f0f0f0;
+.month-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f0f4ff;
+  border: 1px solid #c2d4ff;
+  color: #003087;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.add-income-container .success-message {
-    color: #2ecc71;
-    margin-bottom: 1rem;
+.month-picker-btn:hover {
+  background-color: #e0ecff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.add-income-container .error-message {
-    color: #e74c3c;
-    margin-bottom: 1rem;
+/* Tabel */
+.income-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-size: 0.95rem;
 }
 
-.add-income-container .filter-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.income-table th,
+.income-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-.add-income-container .cancel-edit-button {
-    background-color: #e74c3c;
-    color: white;
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
+.income-table th {
+  background-color: #f5f7fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.income-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Mesaje */
+.success-message,
+.error-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Calendar și datepicker styling */
+.datepicker-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.calendar-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #888;
+}
+
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* Calendar vizual */
+.react-datepicker {
+  font-family: 'Segoe UI', sans-serif;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  font-size: 14px;
+}
+
+.react-datepicker__header {
+  background-color: #007bff;
+  color: white;
+  padding: 1rem 0.5rem;
+  font-weight: bold;
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
+}
+
+.react-datepicker__current-month {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.2rem;
+  padding-top: 0.3rem;
+}
+
+.react-datepicker__month-container {
+  padding: 0.5rem 0;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: white;
+  top: 16px;
+}
+
+/* Butoane edit */
+.edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  background-color: #6c63ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.edit-btn:hover {
+  background-color: #4e47cc;
 }
