@@ -10,6 +10,8 @@ const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const path = require('path');
 const auth = require('./middleware/auth');
+const fs = require('fs');
+const multer = require('multer');
 
 
 // Încarcă variabilele din fișierul .env
@@ -27,6 +29,25 @@ app.use(cors({
   secure: false,
 }));
 
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const userId = req.user.userId;
+    const incomeId = req.params.incomeId;
+    const now = new Date();
+    const folderName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+    const uploadPath = path.join(__dirname, 'uploads', `${userId}`, `${incomeId}`, folderName);
+
+    // Creează folderul dacă nu există
+    fs.mkdirSync(uploadPath, { recursive: true });
+
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  }
+});
+
+const upload = multer({ storage });
 
 // Crează conexiunea la baza de date PostgreSQL
 const pool = new Pool({
@@ -1528,11 +1549,33 @@ app.get('/api/statistics', async (req, res) => {
   }
 });
 
+// Upload fișier pentru venit
+app.post('/upload/:incomeId', verifyToken, upload.single('file'), async (req, res) => {
+  const userId = req.user.userId;
+  const incomeId = req.params.incomeId;
+  const filePath = path.relative(__dirname, req.file.path);
 
-// Servește fișierele statice construite de React
+  try {
+    await pool.query(
+      'UPDATE incomes SET file_path = $1 WHERE id = $2 AND user_id = $3',
+      [filePath, incomeId, userId]
+    );
+    res.json({ success: true, filePath });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Eroare la salvarea fișierului.' });
+  }
+});
+
+module.exports = app;
+
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Rutele pentru frontend
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });

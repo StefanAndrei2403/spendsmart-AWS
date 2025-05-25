@@ -1,0 +1,26 @@
+.dropzone {
+  border: 2px dashed #007bff;
+  padding: 1.2rem;
+  border-radius: 12px;
+  text-align: center;
+  background-color: #f9f9ff;
+  color: #555;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.dropzone:hover {
+  background-color: #eef5ff;
+}
+
+.placeholder {
+  font-size: 0.95rem;
+  color: #888;
+}
+
+.uploaded-file {
+  font-size: 1rem;
+  color: #007bff;
+  font-weight: 500;
+}

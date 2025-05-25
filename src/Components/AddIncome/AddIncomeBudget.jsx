@@ -8,6 +8,8 @@ import { FiPlus, FiEdit, FiCalendar, FiTrendingUp } from 'react-icons/fi';
 import EditIncomeModal from './EditIncomeModal';
 import EditBudgetModal from './EditBudgetModal';
 import './AddIncomeBudget.css';
+import FileUploadDropzone from './FileUploadDropzone';
+import FilePreviewModal from './FilePreviewModal';
 
 const AddIncomeBudget = () => {
   const { user } = useAuth();
@@ -25,6 +27,9 @@ const AddIncomeBudget = () => {
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [incomeToEdit, setIncomeToEdit] = useState(null);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewFilePath, setPreviewFilePath] = useState(null);
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
 
@@ -59,6 +64,7 @@ const AddIncomeBudget = () => {
 
   const handleSubmitIncome = async (e) => {
     e.preventDefault();
+
     if (!incomeName || !incomeAmount || !incomeDate) {
       setErrorMessage("Completează toate câmpurile pentru venit!");
       setSuccessMessage('');
@@ -69,21 +75,44 @@ const AddIncomeBudget = () => {
       name: incomeName,
       amount: incomeAmount,
       date: incomeDate,
-      user_id: user.userId
+      user_id: user.userId,
     };
 
     try {
-      await axios.post('/api/incomes', data);
+      // ✅ Creezi venitul
+      const response = await axios.post('/api/incomes', data, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      const newIncome = response.data;
+
+      // ✅ Dacă ai ales fișier, îl încarci
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        await axios.post(`/api/incomes/upload/${newIncome.id}`, formData, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
       setSuccessMessage("Venitul a fost adăugat cu succes!");
       setErrorMessage('');
       setIncomeName('');
       setIncomeAmount('');
       setIncomeDate('');
+      setSelectedFile(null);
       fetchIncomes();
+
     } catch (err) {
+      console.error("Eroare la adăugare venit:", err);
       setErrorMessage("Eroare la adăugarea venitului!");
       setSuccessMessage('');
-      console.error("Eroare la adăugare venit:", err);
     }
   };
 
@@ -125,6 +154,7 @@ const AddIncomeBudget = () => {
               dateFormat="dd/MM/yyyy"
             />
           </div>
+          <FileUploadDropzone onFileSelected={setSelectedFile} />
           <button type="submit" className="primary-btn">Adaugă Venit</button>
         </form>
       </div>
@@ -168,6 +198,19 @@ const AddIncomeBudget = () => {
                     }}>
                       <FiEdit /> Editează
                     </button>
+
+                    {income.file_path && (
+                      <button
+                        className="primary-btn"
+                        style={{ marginTop: '8px', display: 'block' }}
+                        onClick={() => {
+                          setPreviewFilePath(`/uploads/${income.file_path}`); // ⚠️ modifică aici doar dacă `file_path` este relativ
+                          setPreviewModalOpen(true);
+                        }}
+                      >
+                        Vezi fișier
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -220,6 +263,15 @@ const AddIncomeBudget = () => {
           }}
         />
       )}
+
+      {previewModalOpen && (
+        <FilePreviewModal
+          isOpen={previewModalOpen}
+          onRequestClose={() => setPreviewModalOpen(false)}
+          filePath={previewFilePath}
+        />
+      )}
+
     </div>
   );
 };
