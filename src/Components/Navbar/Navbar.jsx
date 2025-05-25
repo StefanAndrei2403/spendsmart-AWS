@@ -3,7 +3,7 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, NavLink } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import './Navbar.css';
-import { FaUserCircle, FaSignOutAlt, FaHome, FaPlus, FaChartPie, FaUserCog } from 'react-icons/fa';
+import { FaUserCircle, FaSignOutAlt, FaHome, FaPlus, FaChartPie, FaUserCog, FaLock } from 'react-icons/fa';
 
 const Navbar = () => {
   const { isAuthenticated, logout } = useContext(AuthContext);
@@ -57,7 +57,7 @@ const Navbar = () => {
                   <FaUserCog /> Datele contului
                 </Link>
                 <Link to="/change-password" onClick={() => setDropdownOpen(false)}>
-                  🔒 Resetează parola
+                  <FaLock /> Resetează parola
                 </Link>
                 <button onClick={handleLogout}>
                   <FaSignOutAlt /> Logout
