@@ -148,7 +148,7 @@
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
 }
 
-.react-datepicker__navigation {
+.edit-expense-modal .react-datepicker__navigation {
   top: 10px !important;
   width: 32px;
   height: 32px;
@@ -158,20 +158,20 @@
   cursor: pointer;
 }
 
-.react-datepicker__navigation--previous {
+.edit-expense-modal .react-datepicker__navigation--previous {
   left: 10px;
 }
 
-.react-datepicker__navigation--next {
+.edit-expense-modal .react-datepicker__navigation--next {
   right: 10px;
 }
 
-.react-datepicker__navigation-icon {
+.edit-expense-modal .react-datepicker__navigation-icon {
   font-size: 0;
   /* ascunde textul fallback */
 }
 
-.react-datepicker__navigation-icon::before {
+.edit-expense-modal .react-datepicker__navigation-icon::before {
   content: "";
   display: inline-block;
   width: 8px;
@@ -182,10 +182,10 @@
   margin-top: 8px;
 }
 
-.react-datepicker__navigation--previous .react-datepicker__navigation-icon::before {
+.edit-expense-modal .react-datepicker__navigation--previous .react-datepicker__navigation-icon::before {
   transform: rotate(-135deg);
 }
 
-.react-datepicker__navigation--next .react-datepicker__navigation-icon::before {
+.edit-expense-modal .react-datepicker__navigation--next .react-datepicker__navigation-icon::before {
   transform: rotate(45deg);
 }

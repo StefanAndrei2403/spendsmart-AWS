@@ -6,7 +6,6 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import AddCategoryModal from './AddCategoryModal';
 import './AddExpense.css';
-import { FiPlusCircle } from 'react-icons/fi';
 import { FiFilter } from 'react-icons/fi';
 import { FiRefreshCw } from 'react-icons/fi';
 import { FaEdit } from "react-icons/fa";
@@ -15,6 +14,10 @@ import EditExpenseModal from './EditExpenseModal.jsx';
 import { FaChartLine } from 'react-icons/fa';
 import { FaCalendarAlt } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
+import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
+import FileUploadExpense from './FileUploadExpense';
+import FilePreviewExpenseModal from './FilePreviewExpenseModal';
 
 
 const AddExpense = () => {
@@ -53,6 +56,9 @@ const AddExpense = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewFilePath, setPreviewFilePath] = useState(null);
 
 
 
@@ -111,18 +117,20 @@ const AddExpense = () => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dateFilterRef.current && !dateFilterRef.current.contains(e.target)) {
-        setShowDateFilter(false);
-      }
-      if (categoryFilterRef.current && !categoryFilterRef.current.contains(e.target)) {
-        setShowCategoryFilter(false);
-      }
-      if (impulsiveFilterRef.current && !impulsiveFilterRef.current.contains(e.target)) {
-        setShowImpulsiveFilter(false);
-      }
-      if (amountFilterRef.current && !amountFilterRef.current.contains(e.target)) {
-        setShowAmountFilter(false);
-      }
+      // Dacă se apasă pe un input sau în interiorul filtrelor, nu închide
+      const clickedInsideFilter =
+        dateFilterRef.current?.contains(e.target) ||
+        categoryFilterRef.current?.contains(e.target) ||
+        impulsiveFilterRef.current?.contains(e.target) ||
+        amountFilterRef.current?.contains(e.target) ||
+        e.target.tagName === 'INPUT'; // <- foarte important pentru sumă
+
+      if (clickedInsideFilter) return;
+
+      setShowDateFilter(false);
+      setShowCategoryFilter(false);
+      setShowImpulsiveFilter(false);
+      setShowAmountFilter(false);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -153,7 +161,7 @@ const AddExpense = () => {
   // Handle adding or editing expense
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!expenseName || !expenseAmount || !expenseDate || !categoryId) {
+    if (!expenseName || !expenseAmount || !expenseDate || !selectedCategory) {
       setErrorMessage('Te rugăm să completezi toate câmpurile!');
       return;
     }
@@ -162,26 +170,46 @@ const AddExpense = () => {
       name: expenseName,
       amount: expenseAmount,
       date: expenseDate,
-      category_id: categoryId,
+      category_id: selectedCategory,
       user_id: user.userId,
       planned_impulsive: plannedImpulsive
     };
 
     try {
+      let newExpense;
+
       if (editingExpense) {
         await axios.put(`/api/expenses/${editingExpense.id}`, expenseData);
+        newExpense = { id: editingExpense.id };
         setSuccessMessage('Cheltuiala a fost actualizată cu succes!');
       } else {
-        await axios.post('/api/expenses', expenseData);
+        const response = await axios.post('/api/expenses', expenseData);
+        newExpense = response.data;
         setSuccessMessage('Cheltuiala a fost adăugată cu succes!');
       }
 
+      // ✅ Acum se execută mereu dacă există fișier
+      if (selectedFile && newExpense?.id) {
+        console.log("📤 Uploading file for expense", newExpense.id);
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        await axios.post(`/api/expenses/upload/${newExpense.id}`, formData, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      // Reset form
       setExpenseName('');
       setExpenseAmount('');
       setExpenseDate('');
       setCategoryId('');
       setEditingExpense(null);
-      fetchExpenses(); // Refresh the expenses list
+      fetchExpenses();
+      setSelectedFile(null);
     } catch (err) {
       console.error('Error adding or updating expense:', err);
       setErrorMessage('A apărut o eroare. Te rugăm să încerci din nou.');
@@ -208,7 +236,7 @@ const AddExpense = () => {
 
       // ascunde mesajul după 2-3 secunde
       setTimeout(() => {
-        setShowAddCategory(false);
+        setShowAddCategoryModal(false);
         setCategorySuccessMessage('');
       }, 2000);
     } catch (error) {
@@ -294,14 +322,18 @@ const AddExpense = () => {
   };
 
   const handleDelete = async (expenseId) => {
-    if (window.confirm("Ești sigur că vrei să ștergi această cheltuială?")) {
-      try {
-        await axios.delete(`/api/expenses/${expenseId}`);
-        fetchExpenses(); // Reîncarcă lista
-      } catch (err) {
-        console.error("Eroare la ștergerea cheltuielii:", err);
-        setErrorMessage('A apărut o eroare la ștergere.');
-      }
+    try {
+      await axios.delete(`/api/expenses/${expenseId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+
+      toast.success('Cheltuiala a fost ștearsă cu succes!');
+      fetchExpenses();
+    } catch (err) {
+      console.error('Eroare la ștergerea cheltuielii:', err);
+      toast.error('❌ Eroare la ștergerea cheltuielii!');
     }
   };
 
@@ -364,7 +396,7 @@ const AddExpense = () => {
 
               {showAddCategory && (
                 <AddCategoryModal
-                  onClose={() => setShowAddCategory(false)}
+                  onClose={() => setShowAddCategoryModal(false)}
                   onAdd={handleAddCategory}
                   name={newCategory}
                   setName={setNewCategory}
@@ -386,6 +418,7 @@ const AddExpense = () => {
                 Cheltuială neplanificată / impulsivă
               </label>
             </div>
+            <FileUploadExpense onFileSelected={setSelectedFile} />
             <button type="submit" className="primary-btn">
               {editingExpense ? 'Salvează modificările' : 'Adaugă Cheltuială'}
             </button>
@@ -429,331 +462,177 @@ const AddExpense = () => {
               onChange={handleDateChange}
               dateFormat="MM/yyyy"
               showMonthYearPicker
-              open 
+              open
               inline
-              popperPlacement="bottom-start" 
+              popperPlacement="bottom-start"
             />
           )}
           <div className="expenses-list">
-            {finalFilteredExpenses.length === 0 ? (
-              <div className="no-data-container">
-                <p style={{ marginTop: '1rem', color: '#555' }}>
-                  Nu există cheltuieli care să corespundă filtrelor selectate.
-                </p>
+            <table className="expenses-table">
+              <thead>
+                <tr>
+                  <th>Nume</th>
+                  <th style={{ position: 'relative' }}>
+                    Sumă (RON)
+                    <FiFilter
+                      size={18}
+                      onClick={() => setShowAmountFilter(prev => !prev)}
+                      title="Filtrează după sumă"
+                      style={{
+                        marginLeft: '8px',
+                        cursor: 'pointer',
+                        verticalAlign: 'middle',
+                        color: showAmountFilter ? '#007bff' : '#333'
+                      }}
+                    />
+                    {showAmountFilter && (
+                      <div className="filter-dropdown" ref={amountFilterRef}>
+                        <label>
+                          Min:
+                          <input
+                            type="number"
+                            value={minAmount}
+                            onChange={e => setMinAmount(e.target.value)}
+                            placeholder="ex: 10"
+                          />
+                        </label>
+                        <label>
+                          Max:
+                          <input
+                            type="number"
+                            value={maxAmount}
+                            onChange={e => setMaxAmount(e.target.value)}
+                            placeholder="ex: 500"
+                          />
+                        </label>
+                        <button onClick={() => { setMinAmount(''); setMaxAmount(''); }}>Resetează</button>
+                      </div>
+                    )}
+                  </th>
+                  {/* Dată */}
+                  <th style={{ position: 'relative' }}>
+                    Dată
+                    <FiFilter
+                      size={18}
+                      onClick={() => setShowDateFilter(prev => !prev)}
+                      title="Filtrează după dată"
+                      style={{
+                        marginLeft: '8px',
+                        cursor: 'pointer',
+                        verticalAlign: 'middle',
+                        color: showDateFilter ? '#007bff' : '#333'
+                      }}
+                    />
+                    {showDateFilter && (
+                      <div className="filter-dropdown" ref={dateFilterRef}>
+                        {dateFilterOptions.map((date, idx) => (
+                          <label key={idx}>
+                            <input
+                              type="checkbox"
+                              checked={selectedDates.includes(date)}
+                              onChange={() =>
+                                setSelectedDates(prev =>
+                                  prev.includes(date)
+                                    ? prev.filter(d => d !== date)
+                                    : [...prev, date]
+                                )
+                              }
+                            />
+                            {date}
+                          </label>
+                        ))}
+                        <button onClick={() => setSelectedDates([])}>Resetează</button>
+                      </div>
+                    )}
+                  </th>
 
-                <table className="expenses-table">
-                  <thead>
-                    <tr>
-                      <th>Nume</th>
-                      <th style={{ position: 'relative' }}>
-                        Sumă (RON)
-                        <FiFilter
-                          size={18}
-                          onClick={() => setShowAmountFilter(prev => !prev)}
-                          title="Filtrează după sumă"
-                          style={{
-                            marginLeft: '8px',
-                            cursor: 'pointer',
-                            verticalAlign: 'middle',
-                            color: showAmountFilter ? '#007bff' : '#333'
-                          }}
-                        />
-                        {showAmountFilter && (
-                          <div className="filter-dropdown" ref={amountFilterRef}>
-                            <label>
-                              Min:
-                              <input
-                                type="number"
-                                value={minAmount}
-                                onChange={e => setMinAmount(e.target.value)}
-                                placeholder="ex: 10"
-                              />
-                            </label>
-                            <label>
-                              Max:
-                              <input
-                                type="number"
-                                value={maxAmount}
-                                onChange={e => setMaxAmount(e.target.value)}
-                                placeholder="ex: 500"
-                              />
-                            </label>
-                            <button onClick={() => { setMinAmount(''); setMaxAmount(''); }}>Resetează</button>
-                          </div>
-                        )}
-                      </th>
-                      {/* Dată */}
-                      <th style={{ position: 'relative' }}>
-                        Dată
-                        <FiFilter
-                          size={18}
-                          onClick={() => setShowDateFilter(prev => !prev)}
-                          title="Filtrează după dată"
-                          style={{
-                            marginLeft: '8px',
-                            cursor: 'pointer',
-                            verticalAlign: 'middle',
-                            color: showDateFilter ? '#007bff' : '#333'
-                          }}
-                        />
-                        {showDateFilter && (
-                          <div className="filter-dropdown" ref={dateFilterRef}>
-                            {dateFilterOptions.map((date, idx) => (
-                              <label key={idx}>
-                                <input
-                                  type="checkbox"
-                                  checked={selectedDates.includes(date)}
-                                  onChange={() =>
-                                    setSelectedDates(prev =>
-                                      prev.includes(date)
-                                        ? prev.filter(d => d !== date)
-                                        : [...prev, date]
-                                    )
-                                  }
-                                />
-                                {date}
-                              </label>
-                            ))}
-                            <button onClick={() => setSelectedDates([])}>Resetează</button>
-                          </div>
-                        )}
-                      </th>
+                  {/* Categorie */}
+                  <th style={{ position: 'relative' }}>
+                    Categorie
+                    <FiFilter
+                      size={18}
+                      onClick={() => setShowCategoryFilter(prev => !prev)}
+                      title="Filtrează după categorie"
+                      style={{
+                        marginLeft: '8px',
+                        cursor: 'pointer',
+                        verticalAlign: 'middle',
+                        color: showCategoryFilter ? '#007bff' : '#333'
+                      }}
+                    />
+                    {showCategoryFilter && (
+                      <div className="filter-dropdown" ref={categoryFilterRef}>
+                        {categoryFilterOptions.map((cat, index) => (
+                          <label key={index}>
+                            <input
+                              type="checkbox"
+                              checked={selectedCategories.includes(cat)}
+                              onChange={() => {
+                                setSelectedCategories(prev =>
+                                  prev.includes(cat)
+                                    ? prev.filter(c => c !== cat)
+                                    : [...prev, cat]
+                                );
+                              }}
+                            />
+                            {cat}
+                          </label>
+                        ))}
+                        <button onClick={() => setSelectedCategories([])}>Resetează</button>
+                      </div>
+                    )}
+                  </th>
 
-                      {/* Categorie */}
-                      <th style={{ position: 'relative' }}>
-                        Categorie
-                        <FiFilter
-                          size={18}
-                          onClick={() => setShowCategoryFilter(prev => !prev)}
-                          title="Filtrează după categorie"
-                          style={{
-                            marginLeft: '8px',
-                            cursor: 'pointer',
-                            verticalAlign: 'middle',
-                            color: showCategoryFilter ? '#007bff' : '#333'
-                          }}
-                        />
-                        {showCategoryFilter && (
-                          <div className="filter-dropdown" ref={categoryFilterRef}>
-                            {categoryFilterOptions.map((cat, index) => (
-                              <label key={index}>
-                                <input
-                                  type="checkbox"
-                                  checked={selectedCategories.includes(cat)}
-                                  onChange={() => {
-                                    setSelectedCategories(prev =>
-                                      prev.includes(cat)
-                                        ? prev.filter(c => c !== cat)
-                                        : [...prev, cat]
-                                    );
-                                  }}
-                                />
-                                {cat}
-                              </label>
-                            ))}
-                            <button onClick={() => setSelectedCategories([])}>Resetează</button>
-                          </div>
-                        )}
-                      </th>
+                  {/* Impulsivă */}
+                  <th style={{ position: 'relative' }}>
+                    Impulsivă?
+                    <FiFilter
+                      size={18}
+                      onClick={() => setShowImpulsiveFilter(prev => !prev)}
+                      title="Filtrează după impulsivitate"
+                      style={{
+                        marginLeft: '8px',
+                        cursor: 'pointer',
+                        verticalAlign: 'middle',
+                        color: showImpulsiveFilter ? '#007bff' : '#333'
+                      }}
+                    />
+                    {showImpulsiveFilter && (
+                      <div className="filter-dropdown" ref={impulsiveFilterRef}>
+                        {impulsiveFilterOptions.map((option, idx) => (
+                          <label key={idx}>
+                            <input
+                              type="checkbox"
+                              checked={selectedImpulsive.includes(option)}
+                              onChange={() =>
+                                setSelectedImpulsive(prev =>
+                                  prev.includes(option)
+                                    ? prev.filter(i => i !== option)
+                                    : [...prev, option]
+                                )
+                              }
+                            />
+                            {option}
+                          </label>
+                        ))}
+                        <button onClick={() => setSelectedImpulsive([])}>Resetează</button>
+                      </div>
+                    )}
+                  </th>
 
-                      {/* Impulsivă */}
-                      <th style={{ position: 'relative' }}>
-                        Impulsivă?
-                        <FiFilter
-                          size={18}
-                          onClick={() => setShowImpulsiveFilter(prev => !prev)}
-                          title="Filtrează după impulsivitate"
-                          style={{
-                            marginLeft: '8px',
-                            cursor: 'pointer',
-                            verticalAlign: 'middle',
-                            color: showImpulsiveFilter ? '#007bff' : '#333'
-                          }}
-                        />
-                        {showImpulsiveFilter && (
-                          <div className="filter-dropdown" ref={impulsiveFilterRef}>
-                            {impulsiveFilterOptions.map((option, idx) => (
-                              <label key={idx}>
-                                <input
-                                  type="checkbox"
-                                  checked={selectedImpulsive.includes(option)}
-                                  onChange={() =>
-                                    setSelectedImpulsive(prev =>
-                                      prev.includes(option)
-                                        ? prev.filter(i => i !== option)
-                                        : [...prev, option]
-                                    )
-                                  }
-                                />
-                                {option}
-                              </label>
-                            ))}
-                            <button onClick={() => setSelectedImpulsive([])}>Resetează</button>
-                          </div>
-                        )}
-                      </th>
+                  <th>Acțiune</th>
+                </tr>
+              </thead>
 
-                      <th>Acțiune</th>
-                    </tr>
-                  </thead>
-                </table>
-              </div>
-            ) : (
-              <table className="expenses-table">
-                <thead>
+              {finalFilteredExpenses.length === 0 ? (
+                <tbody>
                   <tr>
-                    <th>Nume</th>
-                    <th style={{ position: 'relative' }}>
-                      Sumă (RON)
-                      <FiFilter
-                        size={18}
-                        onClick={() => setShowAmountFilter(prev => !prev)}
-                        title="Filtrează după sumă"
-                        style={{
-                          marginLeft: '8px',
-                          cursor: 'pointer',
-                          verticalAlign: 'middle',
-                          color: showAmountFilter ? '#007bff' : '#333'
-                        }}
-                      />
-                      {showAmountFilter && (
-                        <div className="filter-dropdown" ref={amountFilterRef}>
-                          <label>
-                            Min:
-                            <input
-                              type="number"
-                              value={minAmount}
-                              onChange={e => setMinAmount(e.target.value)}
-                              placeholder="ex: 10"
-                            />
-                          </label>
-                          <label>
-                            Max:
-                            <input
-                              type="number"
-                              value={maxAmount}
-                              onChange={e => setMaxAmount(e.target.value)}
-                              placeholder="ex: 500"
-                            />
-                          </label>
-                          <button onClick={() => { setMinAmount(''); setMaxAmount(''); }}>Resetează</button>
-                        </div>
-                      )}
-                    </th>
-                    {/* Dată */}
-                    <th style={{ position: 'relative' }}>
-                      Dată
-                      <FiFilter
-                        size={18}
-                        onClick={() => setShowDateFilter(prev => !prev)}
-                        title="Filtrează după dată"
-                        style={{
-                          marginLeft: '8px',
-                          cursor: 'pointer',
-                          verticalAlign: 'middle',
-                          color: showDateFilter ? '#007bff' : '#333'
-                        }}
-                      />
-                      {showDateFilter && (
-                        <div className="filter-dropdown" ref={dateFilterRef}>
-                          {dateFilterOptions.map((date, idx) => (
-                            <label key={idx}>
-                              <input
-                                type="checkbox"
-                                checked={selectedDates.includes(date)}
-                                onChange={() =>
-                                  setSelectedDates(prev =>
-                                    prev.includes(date)
-                                      ? prev.filter(d => d !== date)
-                                      : [...prev, date]
-                                  )
-                                }
-                              />
-                              {date}
-                            </label>
-                          ))}
-                          <button onClick={() => setSelectedDates([])}>Resetează</button>
-                        </div>
-                      )}
-                    </th>
-
-                    {/* Categorie */}
-                    <th style={{ position: 'relative' }}>
-                      Categorie
-                      <FiFilter
-                        size={18}
-                        onClick={() => setShowCategoryFilter(prev => !prev)}
-                        title="Filtrează după categorie"
-                        style={{
-                          marginLeft: '8px',
-                          cursor: 'pointer',
-                          verticalAlign: 'middle',
-                          color: showCategoryFilter ? '#007bff' : '#333'
-                        }}
-                      />
-                      {showCategoryFilter && (
-                        <div className="filter-dropdown" ref={categoryFilterRef}>
-                          {categoryFilterOptions.map((cat, index) => (
-                            <label key={index}>
-                              <input
-                                type="checkbox"
-                                checked={selectedCategories.includes(cat)}
-                                onChange={() => {
-                                  setSelectedCategories(prev =>
-                                    prev.includes(cat)
-                                      ? prev.filter(c => c !== cat)
-                                      : [...prev, cat]
-                                  );
-                                }}
-                              />
-                              {cat}
-                            </label>
-                          ))}
-                          <button onClick={() => setSelectedCategories([])}>Resetează</button>
-                        </div>
-                      )}
-                    </th>
-
-                    {/* Impulsivă */}
-                    <th style={{ position: 'relative' }}>
-                      Impulsivă?
-                      <FiFilter
-                        size={18}
-                        onClick={() => setShowImpulsiveFilter(prev => !prev)}
-                        title="Filtrează după impulsivitate"
-                        style={{
-                          marginLeft: '8px',
-                          cursor: 'pointer',
-                          verticalAlign: 'middle',
-                          color: showImpulsiveFilter ? '#007bff' : '#333'
-                        }}
-                      />
-                      {showImpulsiveFilter && (
-                        <div className="filter-dropdown" ref={impulsiveFilterRef}>
-                          {impulsiveFilterOptions.map((option, idx) => (
-                            <label key={idx}>
-                              <input
-                                type="checkbox"
-                                checked={selectedImpulsive.includes(option)}
-                                onChange={() =>
-                                  setSelectedImpulsive(prev =>
-                                    prev.includes(option)
-                                      ? prev.filter(i => i !== option)
-                                      : [...prev, option]
-                                  )
-                                }
-                              />
-                              {option}
-                            </label>
-                          ))}
-                          <button onClick={() => setSelectedImpulsive([])}>Resetează</button>
-                        </div>
-                      )}
-                    </th>
-
-                    <th>Acțiune</th>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '1rem' }}>
+                      Nu există cheltuieli care să corespundă filtrelor selectate.
+                    </td>
                   </tr>
-                </thead>
+                </tbody>
+              ) : (
                 <tbody>
                   {finalFilteredExpenses.map((expense) => {
                     const categoryName = categories.find(cat => cat.id === expense.category_id)?.name || 'Necunoscut';
@@ -767,28 +646,59 @@ const AddExpense = () => {
                           {expense.planned_impulsive ? '✅' : '❌'}
                         </td>
                         <td>
-                          {editingExpense && editingExpense.id === expense.id ? (
-                            <button onClick={handleCancelEdit}>Anulează editarea</button>
-                          ) : (
-                            <>
-                              <button onClick={() => handleEdit(expense)} className="edit-btn">
-                                <FaEdit /> Editează
-                              </button>
-                              <button onClick={() => handleDelete(expense.id)} className="delete-button">
-                                <FaTrashAlt /> Șterge
-                              </button>
-                            </>
+                          <button onClick={() => handleEdit(expense)} className="edit-btn">
+                            <FaEdit /> Editează
+                          </button>
+                          <button
+                            onClick={() => {
+                              Swal.fire({
+                                title: 'Ești sigur?',
+                                text: 'Această cheltuială va fi ștearsă permanent.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#3085d6',
+                                confirmButtonText: 'Da, șterge!',
+                                cancelButtonText: 'Anulează'
+                              }).then((result) => {
+                                if (result.isConfirmed) {
+                                  handleDelete(expense.id);
+                                }
+                              });
+                            }}
+                            className="delete-button"
+                          >
+                            <FaTrashAlt /> Șterge
+                          </button>
+                          {expense.file_path && (
+                            <button
+                              className="primary-btn"
+                              style={{ marginTop: '8px', display: 'block' }}
+                              onClick={() => {
+                                setPreviewFilePath(`/${expense.file_path}`);
+                                setPreviewModalOpen(true);
+                              }}
+                            >
+                              Preview
+                            </button>
                           )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-              </table>
-            )}
+              )}
+            </table>
           </div>
         </div>
       </div>
+      {previewModalOpen && (
+        <FilePreviewExpenseModal
+          isOpen={previewModalOpen}
+          onRequestClose={() => setPreviewModalOpen(false)}
+          filePath={previewFilePath}
+        />
+      )}
       {showEditModal && selectedExpense && (
         <EditExpenseModal
           expense={selectedExpense}
@@ -800,7 +710,12 @@ const AddExpense = () => {
       {showAddCategoryModal && (
         <AddCategoryModal
           onClose={() => setShowAddCategoryModal(false)}
-          onCategoryAdded={fetchCategories} // funcția care actualizează categoriile
+          onAdd={handleAddCategory}
+          name={newCategory}
+          setName={setNewCategory}
+          description={newCategoryDescription}
+          setDescription={setNewCategoryDescription}
+          message={categorySuccessMessage}
         />
       )}
     </div>

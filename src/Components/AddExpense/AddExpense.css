@@ -91,7 +91,7 @@
   border-collapse: collapse;
   background: white;
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
   font-size: 0.95rem;
 }
 
@@ -100,12 +100,14 @@
   padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
+  
 }
 
 .expenses-table th {
   background-color: #f5f7fa;
   font-weight: 600;
   color: #333;
+  position: relative;
 }
 
 .expenses-table tr:nth-child(even) {

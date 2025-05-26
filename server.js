@@ -33,20 +33,27 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const userId = req.user.userId;
     const incomeId = req.params.incomeId;
+    const expenseId = req.params.expenseId;
+
     const now = new Date();
     const folderName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-    const uploadPath = path.join(__dirname, 'uploads', `${userId}`, `${incomeId}`, folderName);
 
-    // Creează folderul dacă nu există
+    let uploadPath = '';
+    if (incomeId) {
+      uploadPath = path.join(__dirname, 'uploads', 'incomes', `${userId}`, `${incomeId}`, folderName);
+    } else if (expenseId) {
+      uploadPath = path.join(__dirname, 'uploads', 'expenses', `${userId}`, `${expenseId}`, folderName);
+    } else {
+      return cb(new Error('Missing incomeId or expenseId'));
+    }
+    console.log('📁 Path de upload:', uploadPath);
     fs.mkdirSync(uploadPath, { recursive: true });
-
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
     cb(null, file.originalname);
   }
 });
-
 const upload = multer({ storage });
 
 // Crează conexiunea la baza de date PostgreSQL
@@ -1568,6 +1575,27 @@ app.get('/api/statistics', async (req, res) => {
     console.error('Error executing query:', err);
     res.status(500).json({ error: 'A apărut o eroare la obținerea datelor.' });
   }
+});
+
+app.post('/api/expenses/upload/:expenseId', verifyToken, upload.single('file'), async (req, res) => {
+  const userId = req.user.userId;
+  const expenseId = req.params.expenseId;
+  const filePath = path.relative(__dirname, req.file.path);
+
+  try {
+    await pool.query(
+      'UPDATE expenses SET file_path = $1 WHERE id = $2 AND user_id = $3',
+      [filePath, expenseId, userId]
+    );
+    res.json({ success: true, filePath });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Eroare la salvarea fișierului.' });
+  }
+
+  console.log("🧾 Upload primit pentru expense:", expenseId);
+  console.log("🗂️ Fișier:", req.file);
+  console.log("👤 User:", req.user);
 });
 
 // Upload fișier pentru venit

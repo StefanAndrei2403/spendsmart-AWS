@@ -10,6 +10,10 @@ import EditBudgetModal from './EditBudgetModal';
 import './AddIncomeBudget.css';
 import FileUploadDropzone from './FileUploadDropzone';
 import FilePreviewModal from './FilePreviewModal';
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
+
+
 
 const AddIncomeBudget = () => {
   const { user } = useAuth();
@@ -126,12 +130,15 @@ const AddIncomeBudget = () => {
     try {
       await axios.delete(`/api/incomes/${incomeId}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
       });
-      fetchIncomes(); // Reîncarcă lista după ștergere
-    } catch (error) {
-      console.error("Eroare la ștergerea venitului:", error);
+
+      toast.success("Venitul a fost șters cu succes!");
+      fetchIncomes();
+    } catch (err) {
+      console.error("Eroare la ștergerea venitului:", err);
+      toast.error("❌ Eroare la ștergerea venitului!");
     }
   };
 
@@ -213,7 +220,25 @@ const AddIncomeBudget = () => {
                       }}>
                         <FiEdit /> Editează
                       </button>
-                      <button className="delete-btn" onClick={() => handleDeleteIncome(income.id)}>
+                      <button
+                        className="delete-btn"
+                        onClick={() => {
+                          Swal.fire({
+                            title: 'Ești sigur?',
+                            text: 'Această acțiune va șterge venitul permanent.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Da, șterge-l!',
+                            cancelButtonText: 'Anulează'
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              handleDeleteIncome(income.id);
+                            }
+                          });
+                        }}
+                      >
                         🗑️ Șterge
                       </button>
                       {income.file_path && (

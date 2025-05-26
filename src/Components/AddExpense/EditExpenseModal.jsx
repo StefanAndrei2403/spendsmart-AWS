@@ -15,10 +15,22 @@ const EditExpenseModal = ({ expense, categories, onClose, onSave }) => {
     setEditedExpense((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(editedExpense);
-  };
+const handleSubmit = (e) => {
+  e.preventDefault();
+
+  // Validare simplă: toate câmpurile trebuie completate
+  if (
+    !editedExpense.name ||
+    !editedExpense.amount ||
+    !editedExpense.date ||
+    !editedExpense.category_id
+  ) {
+    alert("Completează toate câmpurile înainte de a salva.");
+    return;
+  }
+
+  onSave(editedExpense);
+};
 
   return (
     <div className="edit-expense-modal">

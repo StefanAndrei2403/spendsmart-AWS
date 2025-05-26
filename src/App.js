@@ -4,6 +4,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext'; 
 import AppContent from './AppContent'; // Creăm un component separat pentru logica autentificării
 import axios from 'axios';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 
@@ -39,11 +41,13 @@ function App() {
     <GoogleOAuthProvider clientId="166245198945-gh14hvgqlcrr58re9rjdqu985srlnnvo.apps.googleusercontent.com">
       <BrowserRouter>
         <AuthProvider>
-          <AppContent /> 
+          <AppContent />
+          <ToastContainer position="top-right" autoClose={3000} hideProgressBar /> 
         </AuthProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>
   );
+  
 }
 
 export default App;
