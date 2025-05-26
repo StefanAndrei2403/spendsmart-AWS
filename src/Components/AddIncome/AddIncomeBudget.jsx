@@ -122,6 +122,19 @@ const AddIncomeBudget = () => {
     setMonthPickerOpen(false);
   };
 
+  const handleDeleteIncome = async (incomeId) => {
+    try {
+      await axios.delete(`/api/incomes/${incomeId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      fetchIncomes(); // Reîncarcă lista după ștergere
+    } catch (error) {
+      console.error("Eroare la ștergerea venitului:", error);
+    }
+  };
+
   const handleMonthPickerToggle = () => {
     setMonthPickerOpen((prev) => !prev);
   };
@@ -186,34 +199,39 @@ const AddIncomeBudget = () => {
               </tr>
             </thead>
             <tbody>
-              {incomes.map((income) => (
-                <tr key={income.id}>
-                  <td>{income.name}</td>
-                  <td>{Number(income.amount).toFixed(2)} RON</td>
-                  <td>{new Date(income.date).toLocaleDateString('ro-RO')}</td>
-                  <td>
-                    <button className="edit-btn" onClick={() => {
-                      setIncomeToEdit(income);
-                      setModalIsOpen(true);
-                    }}>
-                      <FiEdit /> Editează
-                    </button>
-
-                    {income.file_path && (
-                      <button
-                        className="primary-btn"
-                        style={{ marginTop: '8px', display: 'block' }}
-                        onClick={() => {
-                          setPreviewFilePath(`/uploads/${income.file_path}`); // ⚠️ modifică aici doar dacă `file_path` este relativ
-                          setPreviewModalOpen(true);
-                        }}
-                      >
-                        Vezi fișier
+              {incomes.map((income) => {
+                console.log("👀 Income item:", income);
+                return (
+                  <tr key={income.id}>
+                    <td>{income.name}</td>
+                    <td>{Number(income.amount).toFixed(2)} RON</td>
+                    <td>{new Date(income.date).toLocaleDateString('ro-RO')}</td>
+                    <td>
+                      <button className="edit-btn" onClick={() => {
+                        setIncomeToEdit(income);
+                        setModalIsOpen(true);
+                      }}>
+                        <FiEdit /> Editează
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      <button className="delete-btn" onClick={() => handleDeleteIncome(income.id)}>
+                        🗑️ Șterge
+                      </button>
+                      {income.file_path && (
+                        <button
+                          className="primary-btn"
+                          style={{ marginTop: '8px', display: 'block' }}
+                          onClick={() => {
+                            setPreviewFilePath(`/${income.file_path}`);
+                            setPreviewModalOpen(true);
+                          }}
+                        >
+                          Preview
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

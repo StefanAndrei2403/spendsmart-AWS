@@ -12,7 +12,6 @@ const FileUploadDropzone = ({ onFileSelected }) => {
   const {
     getRootProps,
     getInputProps,
-    isDragActive,
     acceptedFiles
   } = useDropzone({ onDrop });
 

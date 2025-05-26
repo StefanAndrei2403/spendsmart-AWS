@@ -1018,6 +1018,27 @@ app.put('/api/incomes/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/incomes/:id', verifyToken, async (req, res) => {
+  const userId = req.user.userId;
+  const incomeId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM incomes WHERE id = $1 AND user_id = $2',
+      [incomeId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Venitul nu a fost găsit sau nu îți aparține.' });
+    }
+
+    res.json({ message: 'Venitul a fost șters cu succes.' });
+  } catch (err) {
+    console.error('Eroare la ștergerea venitului:', err);
+    res.status(500).json({ error: 'Eroare la ștergerea venitului.' });
+  }
+});
+
 // ------------------ BUGET LUNAR ------------------
 
 // Salvează / actualizează bugetul lunar
@@ -1367,7 +1388,7 @@ app.get('/api/statistics', async (req, res) => {
           ORDER BY total_amount DESC;
         `;
 
-      queryParams = [user_id, start_date, end_date]; 
+      queryParams = [user_id, start_date, end_date];
       break;
 
     case 'prediction':
@@ -1550,7 +1571,7 @@ app.get('/api/statistics', async (req, res) => {
 });
 
 // Upload fișier pentru venit
-app.post('/upload/:incomeId', verifyToken, upload.single('file'), async (req, res) => {
+app.post('/api/incomes/upload/:incomeId', verifyToken, upload.single('file'), async (req, res) => {
   const userId = req.user.userId;
   const incomeId = req.params.incomeId;
   const filePath = path.relative(__dirname, req.file.path);
@@ -1565,6 +1586,9 @@ app.post('/upload/:incomeId', verifyToken, upload.single('file'), async (req, re
     console.error(err);
     res.status(500).json({ error: 'Eroare la salvarea fișierului.' });
   }
+  console.log("🧪 Upload primit pentru income:", incomeId);
+  console.log("🧪 Fișier:", req.file);
+  console.log("🧪 User:", req.user);
 });
 
 module.exports = app;

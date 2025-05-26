@@ -1,4 +1,3 @@
-
 /* Layout principal */
 .income-grid {
   display: grid;
@@ -17,7 +16,7 @@
 }
 
 /* Panel stânga fix */
-.income-grid > .income-section:first-child {
+.income-grid>.income-section:first-child {
   align-self: flex-start;
 }
 
@@ -182,7 +181,7 @@ form input,
   font-family: 'Segoe UI', sans-serif;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   font-size: 14px;
 }
 
@@ -231,4 +230,20 @@ form input,
 
 .edit-btn:hover {
   background-color: #4e47cc;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
 }

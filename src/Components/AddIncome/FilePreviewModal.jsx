@@ -14,6 +14,21 @@ const FilePreviewModal = ({ isOpen, onRequestClose, filePath }) => {
       onRequestClose={onRequestClose}
       className="file-preview-modal"
       overlayClassName="file-preview-overlay"
+      contentLabel="Preview fișier"
+      style={{
+        content: {
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          margin: 'auto',
+          overflow: 'auto',
+          borderRadius: '1rem',
+          padding: '2rem',
+          backgroundColor: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }
+      }}
     >
       <h2>Preview fișier</h2>
       <div className="preview-content">
