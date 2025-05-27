@@ -75,10 +75,25 @@ const AddIncomeBudget = () => {
       return;
     }
 
+    let formattedDate;
+    try {
+      console.log("📅 DEBUG — incomeDate (raw):", incomeDate);
+
+      const dateObj = incomeDate instanceof Date ? incomeDate : new Date(incomeDate);
+      const dateOnly = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+      formattedDate = dateOnly.toLocaleDateString('sv-SE');
+
+      console.log("📅 DEBUG — formattedDate trimis la server:", formattedDate);
+    } catch (e) {
+      console.error("❌ Data introdusă nu este validă:", incomeDate, e);
+      setErrorMessage("Data este invalidă. Te rugăm să alegi o dată corectă.");
+      return;
+    }
+
     const data = {
       name: incomeName,
       amount: incomeAmount,
-      date: incomeDate,
+      date: formattedDate,
       user_id: user.userId,
     };
 

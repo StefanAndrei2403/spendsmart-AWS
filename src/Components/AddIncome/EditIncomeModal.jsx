@@ -1,22 +1,65 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FiX } from 'react-icons/fi';
-import './EditIncomeModal.css'; // Import your CSS file for styling
-
-Modal.setAppElement('#root');
+import './EditIncomeModal.css';
+import axios from 'axios';
+import FileUploadDropzone from './FileUploadDropzone';
+import FilePreviewModal from './FilePreviewModal';
 
 const EditIncomeModal = ({ isOpen, onRequestClose, income, onSave }) => {
-  const [name, setName] = useState(income?.name || '');
-  const [amount, setAmount] = useState(income?.amount || '');
-  const [date, setDate] = useState(income?.date ? new Date(income.date) : new Date());
+  const [name, setName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [filePath, setFilePath] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    if (income) {
+      setName(income.name || '');
+      setAmount(income.amount || '');
+      setDate(income.date ? new Date(income.date) : new Date());
+      setFilePath(income.file_path || null);
+      setSelectedFile(null);
+    }
+  }, [income]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave({ ...income, name, amount, date });
+
+    await onSave({ ...income, name, amount, date });
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      await axios.post(`/api/incomes/upload/${income.id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    }
+
     onRequestClose();
+  };
+
+  const handleDeleteFile = async () => {
+    try {
+      await axios.delete(`/api/incomes/${income.id}/remove-file`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`
+        }
+      });
+      setFilePath(null);
+      setSelectedFile(null);
+      alert("Fișierul a fost șters cu succes.");
+    } catch (err) {
+      console.error("❌ Eroare la ștergerea fișierului:", err);
+      alert("Eroare la ștergerea fișierului.");
+    }
   };
 
   return (
@@ -52,8 +95,29 @@ const EditIncomeModal = ({ isOpen, onRequestClose, income, onSave }) => {
           dateFormat="dd/MM/yyyy"
           className="modal-datepicker"
         />
+
+        <label>Fișier atașat</label>
+        {filePath ? (
+          <>
+            <button type="button" onClick={() => setShowPreview(true)} className="preview-button">
+              📎 Vezi fișierul
+            </button>
+            <button type="button" onClick={handleDeleteFile} className="delete-button">
+              🗑️ Șterge fișier
+            </button>
+          </>
+        ) : (
+          <FileUploadDropzone onFileSelected={(file) => setSelectedFile(file)} />
+        )}
+
         <button type="submit" className="primary-btn">Salvează</button>
       </form>
+
+      <FilePreviewModal
+        isOpen={showPreview}
+        onRequestClose={() => setShowPreview(false)}
+        filePath={filePath}
+      />
     </Modal>
   );
 };

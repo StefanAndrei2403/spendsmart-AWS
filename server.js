@@ -29,6 +29,8 @@ app.use(cors({
   secure: false,
 }));
 
+const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const userId = req.user.userId;
@@ -46,6 +48,7 @@ const storage = multer.diskStorage({
     } else {
       return cb(new Error('Missing incomeId or expenseId'));
     }
+
     console.log('📁 Path de upload:', uploadPath);
     fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
@@ -54,7 +57,19 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   }
 });
-const upload = multer({ storage });
+
+const fileFilter = (req, file, cb) => {
+  if (!allowedTypes.includes(file.mimetype)) {
+    return cb(new Error('⚠️ Tipul fișierului nu este permis.'));
+  }
+  cb(null, true);
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
 
 // Crează conexiunea la baza de date PostgreSQL
 const pool = new Pool({
@@ -1596,6 +1611,46 @@ app.post('/api/expenses/upload/:expenseId', verifyToken, upload.single('file'), 
   console.log("🧾 Upload primit pentru expense:", expenseId);
   console.log("🗂️ Fișier:", req.file);
   console.log("👤 User:", req.user);
+});
+
+app.delete('/api/expenses/:expenseId/remove-file', verifyToken, async (req, res) => {
+  const { expenseId } = req.params;
+
+  console.log('📥 Ruta DELETE /remove-file a fost apelată');
+  console.log("📥 Apel primit pentru ștergere fișier expense:", expenseId);
+
+  const userId = req.user.userId;
+
+  try {
+    const result = await pool.query(
+      'SELECT file_path FROM expenses WHERE id = $1 AND user_id = $2',
+      [expenseId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Cheltuiala nu a fost găsită sau nu aparține utilizatorului.' });
+    }
+
+    const fullPath = path.join(__dirname, result.rows[0].file_path);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath); // șterge fișierul
+      const parentFolder = path.dirname(fullPath);
+      if (fs.existsSync(parentFolder)) {
+        fs.rmdirSync(parentFolder, { recursive: true }); // șterge folderul dacă e gol
+      }
+    }
+
+    // șterge path-ul din DB
+    await pool.query(
+      'UPDATE expenses SET file_path = NULL WHERE id = $1 AND user_id = $2',
+      [expenseId, userId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Eroare la ștergerea fișierului:', err);
+    res.status(500).json({ error: 'Eroare la ștergerea fișierului.' });
+  }
 });
 
 // Upload fișier pentru venit

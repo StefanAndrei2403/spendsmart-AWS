@@ -2,10 +2,17 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import './FileUploadExpense.css';
 
-const FileUploadDropzone = ({ onFileSelected }) => {
-  const onDrop = useCallback((acceptedFiles) => {
+const FileUploadExpense = ({ onFileSelected }) => {
+  const maxSizeMB = 5;
+
+  const onDrop = useCallback((acceptedFiles, fileRejections) => {
+    if (fileRejections.length > 0) {
+      alert('⚠️ Fișierul este prea mare sau are un format neacceptat (PDF, JPG, PNG, max. 5MB).');
+      return;
+    }
+
     if (acceptedFiles.length > 0) {
-      onFileSelected(acceptedFiles[0]); // Trimite fișierul selectat în sus
+      onFileSelected(acceptedFiles[0]);
     }
   }, [onFileSelected]);
 
@@ -13,7 +20,15 @@ const FileUploadDropzone = ({ onFileSelected }) => {
     getRootProps,
     getInputProps,
     acceptedFiles
-  } = useDropzone({ onDrop });
+  } = useDropzone({
+    onDrop,
+    maxSize: maxSizeMB * 1024 * 1024,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png']
+    }
+  });
 
   return (
     <div {...getRootProps({ className: 'dropzone' })}>
@@ -22,11 +37,11 @@ const FileUploadDropzone = ({ onFileSelected }) => {
         <p className="uploaded-file">📎 {acceptedFiles[0].name}</p>
       ) : (
         <p className="placeholder">
-          Trage fișierul aici sau apasă pentru a selecta (PDF, PNG, JPG, DOCX)
+          Trage fișierul aici sau apasă pentru a selecta (PDF, JPG, PNG, max. 5MB)
         </p>
       )}
     </div>
   );
 };
 
-export default FileUploadDropzone;
+export default FileUploadExpense;

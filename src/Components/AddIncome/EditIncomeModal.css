@@ -80,3 +80,34 @@
 .modal-form button.primary-btn:hover {
   background-color: #0056b3;
 }
+
+.preview-button,
+.delete-button {
+  display: inline-block;
+  margin-right: 10px;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.preview-button {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.preview-button:hover {
+  background-color: #117a8b;
+}
+
+.delete-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.delete-button:hover {
+  background-color: #b52a37;
+}

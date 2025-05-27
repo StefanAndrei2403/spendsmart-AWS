@@ -3,34 +3,75 @@ import './EditExpenseModal.css';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaTimes } from 'react-icons/fa';
+import axios from 'axios';
+import FileUploadExpense from './FileUploadExpense';
+import FilePreviewExpenseModal from './FilePreviewExpenseModal';
 
 const EditExpenseModal = ({ expense, categories, onClose, onSave }) => {
   const [editedExpense, setEditedExpense] = useState({ ...expense });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     setEditedExpense({ ...expense });
+    setSelectedFile(null); // reset la fiecare redeschidere
   }, [expense]);
 
   const handleChange = (field, value) => {
     setEditedExpense((prev) => ({ ...prev, [field]: value }));
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault();
+  const handleDeleteFile = async () => {
+    try {
+      console.log("📤 Expense ID pentru delete:", expense.id);
+      await axios.delete(`/api/expenses/${expense.id}/remove-file`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`
+        }
+      });
+      setEditedExpense((prev) => ({ ...prev, file_path: null }));
+      setSelectedFile(null);
+      alert("Fișierul a fost șters cu succes.");
+    } catch (error) {
+      console.error("❌ Eroare la ștergerea fișierului:", error);
+      alert("Eroare la ștergerea fișierului.");
+    }
+  };
 
-  // Validare simplă: toate câmpurile trebuie completate
-  if (
-    !editedExpense.name ||
-    !editedExpense.amount ||
-    !editedExpense.date ||
-    !editedExpense.category_id
-  ) {
-    alert("Completează toate câmpurile înainte de a salva.");
-    return;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  onSave(editedExpense);
-};
+    if (
+      !editedExpense.name ||
+      !editedExpense.amount ||
+      !editedExpense.date ||
+      !editedExpense.category_id
+    ) {
+      alert("Completează toate câmpurile înainte de a salva.");
+      return;
+    }
+
+    try {
+      await onSave(editedExpense); // salvează cheltuiala
+
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        await axios.post(`/api/expenses/upload/${expense.id}`, formData, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      }
+
+      onClose();
+    } catch (err) {
+      console.error("❌ Eroare la actualizare cheltuială sau upload:", err);
+      alert("Eroare la salvarea modificărilor.");
+    }
+  };
 
   return (
     <div className="edit-expense-modal">
@@ -44,12 +85,14 @@ const handleSubmit = (e) => {
             value={editedExpense.name}
             onChange={(e) => handleChange('name', e.target.value)}
           />
+
           <label>Sumă</label>
           <input
             type="number"
             value={editedExpense.amount}
             onChange={(e) => handleChange('amount', e.target.value)}
           />
+
           <label>Data</label>
           <DatePicker
             selected={new Date(editedExpense.date)}
@@ -57,6 +100,7 @@ const handleSubmit = (e) => {
             dateFormat="yyyy-MM-dd"
             className="datepicker"
           />
+
           <label>Categorie</label>
           <select
             value={editedExpense.category_id}
@@ -68,6 +112,7 @@ const handleSubmit = (e) => {
               </option>
             ))}
           </select>
+
           <div className="checkbox-group">
             <input
               type="checkbox"
@@ -77,11 +122,32 @@ const handleSubmit = (e) => {
             />
             <label htmlFor="impulsiv">Cheltuială neplanificată / impulsivă</label>
           </div>
+
+          <label>Fișier atașat</label>
+          {editedExpense.file_path ? (
+            <>
+              <button type="button" onClick={() => setShowPreview(true)} className="preview-button">
+                📎 Vezi fișierul
+              </button>
+              <button type="button" onClick={handleDeleteFile} className="delete-button">
+                🗑️ Șterge fișier
+              </button>
+            </>
+          ) : (
+            <FileUploadExpense onFileSelected={(file) => setSelectedFile(file)} />
+          )}
+
           <div className="modal-buttons">
             <button type="button" className="cancel-btn" onClick={onClose}>Anulează</button>
             <button type="submit" className="primary-btn">Salvează modificările</button>
           </div>
         </form>
+
+        <FilePreviewExpenseModal
+          isOpen={showPreview}
+          onRequestClose={() => setShowPreview(false)}
+          filePath={`${process.env.REACT_APP_API_URL}/${editedExpense.file_path?.replace(/\\/g, '/')}`}
+        />
       </div>
     </div>
   );
