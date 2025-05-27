@@ -3,7 +3,7 @@ import Modal from 'react-modal';
 import './FilePreviewModal.css';
 
 const FilePreviewModal = ({ isOpen, onRequestClose, filePath }) => {
-  const fileExtension = filePath.split('.').pop().toLowerCase();
+  const fileExtension = filePath ? filePath.split('.').pop().toLowerCase() : '';
 
   const isImage = ['jpg', 'jpeg', 'png'].includes(fileExtension);
   const isPDF = fileExtension === 'pdf';
