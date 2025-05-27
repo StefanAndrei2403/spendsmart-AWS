@@ -169,15 +169,11 @@ const AddExpense = () => {
 
     let formattedDate;
     try {
-      console.log("📅 DEBUG — expenseData (raw):", expenseData);
-
-      const dateObj = expenseData instanceof Date ? expenseData : new Date(expenseData);
+      const dateObj = expenseDate instanceof Date ? expenseDate : new Date(expenseDate);
       const dateOnly = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
       formattedDate = dateOnly.toLocaleDateString('sv-SE');
-
-      console.log("📅 DEBUG — formattedDate trimis la server:", formattedDate);
     } catch (e) {
-      console.error("❌ Data introdusă nu este validă:", expenseData, e);
+      console.error("❌ Data introdusă nu este validă:", expenseDate, e);
       setErrorMessage("Data este invalidă. Te rugăm să alegi o dată corectă.");
       return;
     }
@@ -190,6 +186,8 @@ const AddExpense = () => {
       user_id: user.userId,
       planned_impulsive: plannedImpulsive
     };
+
+    console.log("📅 DEBUG — expenseData (formatted):", expenseData);
 
     try {
       let newExpense;
