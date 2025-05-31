@@ -20,7 +20,7 @@ dotenv.config({ path: './.env.production' });
 const app = express();
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5000', 'https://white-hill-07c276010.6.azurestaticapps.net', 'https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net', 'http://localhost:8080'],
+  origin: ['http://localhost:3000', 'http://localhost:5000', 'https://white-hill-07c276010.6.azurestaticapps.net', 'https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net', 'http://localhost:8080', 'https://spendsmart.eu-central-1.elasticbeanstalk.com'],
   methods: 'GET,POST,PUT,DELETE, OPTIONS',
   allowedHeaders: 'Content-Type,Authorization',
   credentials: true,
@@ -73,14 +73,8 @@ const upload = multer({
 
 // Crează conexiunea la baza de date PostgreSQL
 const pool = new Pool({
-  host: process.env.PGHOST,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  port: process.env.PGPORT,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  connectionString: process.env.DB_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 // Verifică conexiunea la baza de date

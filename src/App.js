@@ -12,7 +12,7 @@ import 'react-toastify/dist/ReactToastify.css';
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL =
   process.env.REACT_APP_API_URL ||
-  'https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net';
+  'spendsmart.eu-central-1.elasticbeanstalk.com';
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('auth_token');
   if (token) {

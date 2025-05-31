@@ -43,8 +43,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "build": "cross-env REACT_APP_API_URL=https://spendsmart-fubpc6d9cagyaya9.westeurope-01.azurewebsites.net react-scripts build",
-    "start": "npm install && npm run build && npm run server",
+    "build": "cross-env REACT_APP_API_URL=http://spendsmart.eu-central-1.elasticbeanstalk.com react-scripts build",
+    "start": "node server.js",
     "client": "react-scripts start",
     "server": "node server.js",
     "eject": "react-scripts eject"
